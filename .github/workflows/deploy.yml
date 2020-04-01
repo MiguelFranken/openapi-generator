@@ -11,5 +11,6 @@ jobs:
         uses: mr-smithers-excellent/docker-build-push@v2
         with:
           image: it4kidsac/openapi-generator
+          registry: docker.io
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
