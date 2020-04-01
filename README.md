@@ -13,7 +13,9 @@
 - [Codegen](./modules/openapi-generator/src/main/java/org/openapitools/codegen/languages/TypeScriptAngularClientCodegen.java)
 
 ## Getting Started
-- `mvn install` in root directory
+- `mvn clean package -DskipTests` in root directory
 - `./bin/stubi.sh` in root directory
 
 This generates the [sample](./samples/client/petstore/stubi-backend-angular-api-client).
+
+Once the project was built you can test out template changes which don't require recompilation of the entire project just by executing `./bin/stubi.sh`  

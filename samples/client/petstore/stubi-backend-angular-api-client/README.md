@@ -1,11 +1,11 @@
-## Stubi Backend Angular API Client
+## Stubi Backend Angular API Client Test2
 
 ### NPM Configuration
 Add `@miguelfranken:registry=https://npm.pkg.github.com` to `~/.npmrc`
 
 ### Install
 ```
-npm install @miguelfranken/stubi-backend-angular-client@0.0.1-SNAPSHOT.202004011549 --save
+npm install @miguelfranken/stubi-backend-angular-client@0.0.1-SNAPSHOT.202004011600 --save
 ```
 
 ### General usage
