@@ -1,3 +1,5 @@
+import { Type } from "class-transformer";
+
 export class {{classname}} { {{>modelGenericAdditionalProperties}}
 {{#vars}}
     {{#description}}
@@ -5,6 +7,8 @@ export class {{classname}} { {{>modelGenericAdditionalProperties}}
      * {{{description}}}
      */
     {{/description}}
+    {{#isDate}}@Type(() => Date){{/isDate}}
+    {{#isDateTime}}@Type(() => Date){{/isDateTime}}
     {{#isReadOnly}}readonly {{/isReadOnly}}{{{name}}}{{^required}}?{{/required}}: {{#isEnum}}{{{datatypeWithEnum}}}{{/isEnum}}{{^isEnum}}{{{dataType}}}{{/isEnum}}{{#isNullable}} | null{{/isNullable}};
 {{/vars}}
 }{{>modelGenericEnums}}

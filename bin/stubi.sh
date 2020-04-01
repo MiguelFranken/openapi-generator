@@ -10,7 +10,7 @@ fi
 # if you've executed sbt assembly previously it will use that instead.
 if [ "$#" -ne 1 ]
 then
-  export JAVA_OPTS="${JAVA_OPTS} -Xmx1024M -DloggerPath=conf/log4j.properties"
+  export JAVA_OPTS="${JAVA_OPTS} -Xmx1024M -DloggerPath=conf/log4j.properties -DdebugModels"
 else
   export JAVA_OPTS="${JAVA_OPTS} -Xmx1024M -DloggerPath=conf/log4j.properties -Dlog.level=debug -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
 fi

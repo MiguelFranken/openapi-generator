@@ -14,15 +14,29 @@
 /**
  * An order for a pets from the pet store
  */
+import { Type } from "class-transformer";
+
 export class Order { 
+    
+    
     id?: number;
+    
+    
     petId?: number;
+    
+    
     quantity?: number;
-    shipDate?: string;
+    
+    @Type(() => Date)
+    shipDate?: Date;
     /**
      * Order Status
      */
+    
+    
     status?: Order.StatusEnum;
+    
+    
     complete?: boolean;
 }
 export namespace Order {

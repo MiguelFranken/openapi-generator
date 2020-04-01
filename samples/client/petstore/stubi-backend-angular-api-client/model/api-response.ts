@@ -14,9 +14,17 @@
 /**
  * Describes the result of uploading an image resource
  */
+import { Type } from "class-transformer";
+
 export class ApiResponse { 
+    
+    
     code?: number;
+    
+    
     type?: string;
+    
+    
     message?: string;
 }
 

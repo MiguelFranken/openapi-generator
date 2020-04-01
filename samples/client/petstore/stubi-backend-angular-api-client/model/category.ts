@@ -14,8 +14,14 @@
 /**
  * A category for a pet
  */
+import { Type } from "class-transformer";
+
 export class Category { 
+    
+    
     id?: number;
+    
+    
     name?: string;
 }
 

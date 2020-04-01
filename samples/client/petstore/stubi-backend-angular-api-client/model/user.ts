@@ -14,17 +14,35 @@
 /**
  * A User who is purchasing from the pet store
  */
+import { Type } from "class-transformer";
+
 export class User { 
+    
+    
     id?: number;
+    
+    
     username?: string;
+    
+    
     firstName?: string;
+    
+    
     lastName?: string;
+    
+    
     email?: string;
+    
+    
     password?: string;
+    
+    
     phone?: string;
     /**
      * User Status
      */
+    
+    
     userStatus?: number;
 }
 

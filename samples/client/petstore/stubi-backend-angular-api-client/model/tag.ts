@@ -14,8 +14,14 @@
 /**
  * A tag for a pet
  */
+import { Type } from "class-transformer";
+
 export class Tag { 
+    
+    
     id?: number;
+    
+    
     name?: string;
 }
 
