@@ -16,7 +16,7 @@ import { Tag } from './tag';
 /**
  * A pet for sale in the pet store
  */
-export interface Pet { 
+export class Pet { 
     id?: number;
     category?: Category;
     name: string;

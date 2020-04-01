@@ -12,15 +12,31 @@
 /* tslint:disable:no-unused-variable member-ordering */
 
 import { Inject, Injectable, Optional }                      from '@angular/core';
-import { HttpClient, HttpHeaders, HttpParams,
+import { Logger } from "@upe/logger";
+import { HttpClient, HttpHeaders, HttpParams, HttpErrorResponse,
          HttpResponse, HttpEvent, HttpParameterCodec }       from '@angular/common/http';
 import { CustomHttpParameterCodec }                          from '../encoder';
-import { Observable }                                        from 'rxjs';
+import { Observable, throwError, Subject } from 'rxjs';
+import { plainToClassFromExist } from "class-transformer";
+import { catchError, map, concatMap } from "rxjs/operators";
 
 import { Order } from '../model/models';
 
-import { BASE_PATH, COLLECTION_FORMATS }                     from '../variables';
+import { BASE_PATH, COLLECTION_FORMATS, HttpImage }          from '../variables';
 import { Configuration }                                     from '../configuration';
+
+interface LogRequest {
+    url: string;
+    params?: HttpParams;
+    body?: any;
+}
+
+interface BlobOptions {
+    params?: HttpParams | {
+        [param: string]: string | string[];
+    };
+    responseType: "json"; // "blob" as "json"
+}
 
 
 export interface DeleteOrderRequestParams {
@@ -49,7 +65,42 @@ export class StoreService {
     public configuration = new Configuration();
     public encoder: HttpParameterCodec;
 
-    constructor(protected httpClient: HttpClient, @Optional()@Inject(BASE_PATH) basePath: string, @Optional() configuration: Configuration) {
+    private logger: Logger = new Logger({ name: "StoreService", flags: ["service"] });
+
+    /**
+     * Executed when an HTTP error occurred
+     */
+    private getErrorCallback(request: LogRequest) {
+        return (fullHttpErrorResponse: HttpErrorResponse) => {
+            const errorDto = fullHttpErrorResponse.error;
+            this.logger.error("Error occurred", {
+                request,
+                error: errorDto
+            });
+            return throwError(errorDto);
+        };
+    }
+
+    /**
+    * Transforms asynchronously a blob into an image using the file reader
+    */
+    private createImageFromBlob(image: Blob): Observable<HttpImage> {
+        const reader = new FileReader();
+        if (image) {
+            reader.readAsDataURL(image);
+        }
+        const subject = new Subject<string | ArrayBuffer>();
+        reader.addEventListener("load", () => {
+            subject.next(reader.result);
+        }, false);
+        return subject.asObservable();
+    }
+
+    constructor(
+      protected httpClient: HttpClient,
+      @Optional()@Inject(BASE_PATH) basePath: string,
+      @Optional() configuration: Configuration
+    ) {
         if (configuration) {
             this.configuration = configuration;
         }
@@ -108,9 +159,17 @@ export class StoreService {
      * @param reportProgress flag to report request and response progress.
      */
     public deleteOrder(requestParameters: DeleteOrderRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<any>;
+    public deleteOrder<T>(requestParameters: DeleteOrderRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}, resType?: new() => T): Observable<T>;
     public deleteOrder(requestParameters: DeleteOrderRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<HttpResponse<any>>;
     public deleteOrder(requestParameters: DeleteOrderRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<HttpEvent<any>>;
-    public deleteOrder(requestParameters: DeleteOrderRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: undefined}): Observable<any> {
+    public deleteOrder(requestParameters: DeleteOrderRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: undefined}, resType?: any): Observable<any> {
+
+      if (resType !== undefined) {
+          this.logger.debug("Using extended DTO for deserialization");
+      } else {
+          this.logger.debug("There is no custom DTO");
+      }
+        this.logger.debug("Sending request deleteOrder", requestParameters);
         const orderId = requestParameters.orderId;
         if (orderId === null || orderId === undefined) {
             throw new Error('Required parameter orderId was null or undefined when calling deleteOrder.');
@@ -134,16 +193,57 @@ export class StoreService {
         if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.startsWith('text')) {
             responseType = 'text';
         }
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            responseType = "blob" as "json";
+        }
 
-        return this.httpClient.delete<any>(`${this.configuration.basePath}/store/order/${encodeURIComponent(String(orderId))}`,
-            {
-                responseType: <any>responseType,
-                withCredentials: this.configuration.withCredentials,
-                headers: headers,
-                observe: observe,
-                reportProgress: reportProgress
+
+      const httpOptions = {
+          responseType: <any>responseType,
+          withCredentials: this.configuration.withCredentials,
+          headers: headers,
+          observe: observe,
+          reportProgress: reportProgress
+      };
+
+        const requestPath = `${this.configuration.basePath}/store/order/${encodeURIComponent(String(orderId))}`;
+
+        const logRequest: LogRequest = {
+            url: requestPath,
+            
+        };
+
+        if (httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            return this.httpClient.get<Blob>(requestPath, httpOptions as BlobOptions).pipe(
+                concatMap(result => {
+                    return this.createImageFromBlob(result);
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        } else {
+            if(resType !== undefined) {
+                const responseObservable = this.httpClient.delete<any>(requestPath ,
+          httpOptions
+            ).pipe(
+                map(response => {
+                    if (resType) {
+                        return plainToClassFromExist(new resType(), response);
+                    } else {
+                        return response;
+                    }
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+                return responseObservable;
+            } else {
+                return this.httpClient.delete<any>(requestPath, 
+                    httpOptions
+                ).pipe(
+                    catchError(this.getErrorCallback(logRequest).bind(this))
+                );
             }
-        );
+        }
+
     }
 
     /**
@@ -153,9 +253,17 @@ export class StoreService {
      * @param reportProgress flag to report request and response progress.
      */
     public getInventory(observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json'}): Observable<{ [key: string]: number; }>;
+    public getInventory<T>(observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json'}, resType?: new() => T): Observable<T>;
     public getInventory(observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json'}): Observable<HttpResponse<{ [key: string]: number; }>>;
     public getInventory(observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json'}): Observable<HttpEvent<{ [key: string]: number; }>>;
-    public getInventory(observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json'}): Observable<any> {
+    public getInventory(observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json'}, resType?: any): Observable<any> {
+
+      if (resType !== undefined) {
+          this.logger.debug("Using extended DTO for deserialization");
+      } else {
+          this.logger.debug("There is no custom DTO");
+      }
+        this.logger.debug("Sending request getInventory");
 
         let headers = this.defaultHeaders;
 
@@ -184,16 +292,57 @@ export class StoreService {
         if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.startsWith('text')) {
             responseType = 'text';
         }
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            responseType = "blob" as "json";
+        }
 
-        return this.httpClient.get<{ [key: string]: number; }>(`${this.configuration.basePath}/store/inventory`,
-            {
-                responseType: <any>responseType,
-                withCredentials: this.configuration.withCredentials,
-                headers: headers,
-                observe: observe,
-                reportProgress: reportProgress
+
+      const httpOptions = {
+          responseType: <any>responseType,
+          withCredentials: this.configuration.withCredentials,
+          headers: headers,
+          observe: observe,
+          reportProgress: reportProgress
+      };
+
+        const requestPath = `${this.configuration.basePath}/store/inventory`;
+
+        const logRequest: LogRequest = {
+            url: requestPath,
+            
+        };
+
+        if (httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            return this.httpClient.get<Blob>(requestPath, httpOptions as BlobOptions).pipe(
+                concatMap(result => {
+                    return this.createImageFromBlob(result);
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        } else {
+            if(resType !== undefined) {
+                const responseObservable = this.httpClient.get<any>(requestPath ,
+          httpOptions
+            ).pipe(
+                map(response => {
+                    if (resType) {
+                        return plainToClassFromExist(new resType(), response);
+                    } else {
+                        return response;
+                    }
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+                return responseObservable;
+            } else {
+                return this.httpClient.get<{ [key: string]: number; }>(requestPath, 
+                    httpOptions
+                ).pipe(
+                    catchError(this.getErrorCallback(logRequest).bind(this))
+                );
             }
-        );
+        }
+
     }
 
     /**
@@ -204,9 +353,17 @@ export class StoreService {
      * @param reportProgress flag to report request and response progress.
      */
     public getOrderById(requestParameters: GetOrderByIdRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<Order>;
+    public getOrderById<T>(requestParameters: GetOrderByIdRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}, resType?: new() => T): Observable<T>;
     public getOrderById(requestParameters: GetOrderByIdRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<HttpResponse<Order>>;
     public getOrderById(requestParameters: GetOrderByIdRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<HttpEvent<Order>>;
-    public getOrderById(requestParameters: GetOrderByIdRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<any> {
+    public getOrderById(requestParameters: GetOrderByIdRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}, resType?: any): Observable<any> {
+
+      if (resType !== undefined) {
+          this.logger.debug("Using extended DTO for deserialization");
+      } else {
+          this.logger.debug("There is no custom DTO");
+      }
+        this.logger.debug("Sending request getOrderById", requestParameters);
         const orderId = requestParameters.orderId;
         if (orderId === null || orderId === undefined) {
             throw new Error('Required parameter orderId was null or undefined when calling getOrderById.');
@@ -232,16 +389,57 @@ export class StoreService {
         if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.startsWith('text')) {
             responseType = 'text';
         }
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            responseType = "blob" as "json";
+        }
 
-        return this.httpClient.get<Order>(`${this.configuration.basePath}/store/order/${encodeURIComponent(String(orderId))}`,
-            {
-                responseType: <any>responseType,
-                withCredentials: this.configuration.withCredentials,
-                headers: headers,
-                observe: observe,
-                reportProgress: reportProgress
+
+      const httpOptions = {
+          responseType: <any>responseType,
+          withCredentials: this.configuration.withCredentials,
+          headers: headers,
+          observe: observe,
+          reportProgress: reportProgress
+      };
+
+        const requestPath = `${this.configuration.basePath}/store/order/${encodeURIComponent(String(orderId))}`;
+
+        const logRequest: LogRequest = {
+            url: requestPath,
+            
+        };
+
+        if (httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            return this.httpClient.get<Blob>(requestPath, httpOptions as BlobOptions).pipe(
+                concatMap(result => {
+                    return this.createImageFromBlob(result);
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        } else {
+            if(resType !== undefined) {
+                const responseObservable = this.httpClient.get<any>(requestPath ,
+          httpOptions
+            ).pipe(
+                map(response => {
+                    if (resType) {
+                        return plainToClassFromExist(new resType(), response);
+                    } else {
+                        return response;
+                    }
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+                return responseObservable;
+            } else {
+                return this.httpClient.get<Order>(requestPath, 
+                    httpOptions
+                ).pipe(
+                    catchError(this.getErrorCallback(logRequest).bind(this))
+                );
             }
-        );
+        }
+
     }
 
     /**
@@ -251,9 +449,17 @@ export class StoreService {
      * @param reportProgress flag to report request and response progress.
      */
     public placeOrder(requestParameters: PlaceOrderRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<Order>;
+    public placeOrder<T>(requestParameters: PlaceOrderRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}, resType?: new() => T): Observable<T>;
     public placeOrder(requestParameters: PlaceOrderRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<HttpResponse<Order>>;
     public placeOrder(requestParameters: PlaceOrderRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<HttpEvent<Order>>;
-    public placeOrder(requestParameters: PlaceOrderRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<any> {
+    public placeOrder(requestParameters: PlaceOrderRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}, resType?: any): Observable<any> {
+
+      if (resType !== undefined) {
+          this.logger.debug("Using extended DTO for deserialization");
+      } else {
+          this.logger.debug("There is no custom DTO");
+      }
+        this.logger.debug("Sending request placeOrder", requestParameters);
         const body = requestParameters.body;
         if (body === null || body === undefined) {
             throw new Error('Required parameter body was null or undefined when calling placeOrder.');
@@ -287,17 +493,59 @@ export class StoreService {
         if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.startsWith('text')) {
             responseType = 'text';
         }
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            responseType = "blob" as "json";
+        }
 
-        return this.httpClient.post<Order>(`${this.configuration.basePath}/store/order`,
-            body,
-            {
-                responseType: <any>responseType,
-                withCredentials: this.configuration.withCredentials,
-                headers: headers,
-                observe: observe,
-                reportProgress: reportProgress
+
+      const httpOptions = {
+          responseType: <any>responseType,
+          withCredentials: this.configuration.withCredentials,
+          headers: headers,
+          observe: observe,
+          reportProgress: reportProgress
+      };
+
+        const requestPath = `${this.configuration.basePath}/store/order`;
+
+        const logRequest: LogRequest = {
+            url: requestPath,
+            body: body
+        };
+
+        if (httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            return this.httpClient.get<Blob>(requestPath, httpOptions as BlobOptions).pipe(
+                concatMap(result => {
+                    return this.createImageFromBlob(result);
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        } else {
+            if(resType !== undefined) {
+                const responseObservable = this.httpClient.post<any>(requestPath ,
+          body,
+          httpOptions
+            ).pipe(
+                map(response => {
+                    if (resType) {
+                        return plainToClassFromExist(new resType(), response);
+                    } else {
+                        return response;
+                    }
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+                return responseObservable;
+            } else {
+                return this.httpClient.post<Order>(requestPath, 
+                body,
+                    httpOptions
+                ).pipe(
+                    catchError(this.getErrorCallback(logRequest).bind(this))
+                );
             }
-        );
+        }
+
     }
 
 }

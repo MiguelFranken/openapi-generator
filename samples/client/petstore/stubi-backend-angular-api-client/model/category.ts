@@ -12,19 +12,10 @@
 
 
 /**
- * A User who is purchasing from the pet store
+ * A category for a pet
  */
-export interface User { 
+export class Category { 
     id?: number;
-    username?: string;
-    firstName?: string;
-    lastName?: string;
-    email?: string;
-    password?: string;
-    phone?: string;
-    /**
-     * User Status
-     */
-    userStatus?: number;
+    name?: string;
 }
 

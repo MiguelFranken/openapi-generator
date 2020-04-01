@@ -8,7 +8,7 @@
 - Maven 3.6.x
 
 ## Important Files & Directories
-- [Sample](./samples/client/petstore/stubi-backend-angular-api)
+- [Sample](./samples/client/petstore/stubi-backend-angular-api-client)
 - [Templates](./modules/openapi-generator/src/main/resources/typescript-angular)
 - [Codegen](./modules/openapi-generator/src/main/java/org/openapitools/codegen/languages/TypeScriptAngularClientCodegen.java)
 
@@ -16,4 +16,4 @@
 - `mvn install` in root directory
 - `./bin/stubi.sh` in root directory
 
-This generates the [Sample](./samples/client/petstore/stubi-backend-angular-api).
+This generates the [sample](./samples/client/petstore/stubi-backend-angular-api-client).

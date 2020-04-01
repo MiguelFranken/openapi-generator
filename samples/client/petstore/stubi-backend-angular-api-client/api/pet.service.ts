@@ -12,16 +12,32 @@
 /* tslint:disable:no-unused-variable member-ordering */
 
 import { Inject, Injectable, Optional }                      from '@angular/core';
-import { HttpClient, HttpHeaders, HttpParams,
+import { Logger } from "@upe/logger";
+import { HttpClient, HttpHeaders, HttpParams, HttpErrorResponse,
          HttpResponse, HttpEvent, HttpParameterCodec }       from '@angular/common/http';
 import { CustomHttpParameterCodec }                          from '../encoder';
-import { Observable }                                        from 'rxjs';
+import { Observable, throwError, Subject } from 'rxjs';
+import { plainToClassFromExist } from "class-transformer";
+import { catchError, map, concatMap } from "rxjs/operators";
 
 import { ApiResponse } from '../model/models';
 import { Pet } from '../model/models';
 
-import { BASE_PATH, COLLECTION_FORMATS }                     from '../variables';
+import { BASE_PATH, COLLECTION_FORMATS, HttpImage }          from '../variables';
 import { Configuration }                                     from '../configuration';
+
+interface LogRequest {
+    url: string;
+    params?: HttpParams;
+    body?: any;
+}
+
+interface BlobOptions {
+    params?: HttpParams | {
+        [param: string]: string | string[];
+    };
+    responseType: "json"; // "blob" as "json"
+}
 
 
 export interface AddPetRequestParams {
@@ -84,7 +100,42 @@ export class PetService {
     public configuration = new Configuration();
     public encoder: HttpParameterCodec;
 
-    constructor(protected httpClient: HttpClient, @Optional()@Inject(BASE_PATH) basePath: string, @Optional() configuration: Configuration) {
+    private logger: Logger = new Logger({ name: "PetService", flags: ["service"] });
+
+    /**
+     * Executed when an HTTP error occurred
+     */
+    private getErrorCallback(request: LogRequest) {
+        return (fullHttpErrorResponse: HttpErrorResponse) => {
+            const errorDto = fullHttpErrorResponse.error;
+            this.logger.error("Error occurred", {
+                request,
+                error: errorDto
+            });
+            return throwError(errorDto);
+        };
+    }
+
+    /**
+    * Transforms asynchronously a blob into an image using the file reader
+    */
+    private createImageFromBlob(image: Blob): Observable<HttpImage> {
+        const reader = new FileReader();
+        if (image) {
+            reader.readAsDataURL(image);
+        }
+        const subject = new Subject<string | ArrayBuffer>();
+        reader.addEventListener("load", () => {
+            subject.next(reader.result);
+        }, false);
+        return subject.asObservable();
+    }
+
+    constructor(
+      protected httpClient: HttpClient,
+      @Optional()@Inject(BASE_PATH) basePath: string,
+      @Optional() configuration: Configuration
+    ) {
         if (configuration) {
             this.configuration = configuration;
         }
@@ -155,9 +206,17 @@ export class PetService {
      * @param reportProgress flag to report request and response progress.
      */
     public addPet(requestParameters: AddPetRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<any>;
+    public addPet<T>(requestParameters: AddPetRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}, resType?: new() => T): Observable<T>;
     public addPet(requestParameters: AddPetRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<HttpResponse<any>>;
     public addPet(requestParameters: AddPetRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<HttpEvent<any>>;
-    public addPet(requestParameters: AddPetRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: undefined}): Observable<any> {
+    public addPet(requestParameters: AddPetRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: undefined}, resType?: any): Observable<any> {
+
+      if (resType !== undefined) {
+          this.logger.debug("Using extended DTO for deserialization");
+      } else {
+          this.logger.debug("There is no custom DTO");
+      }
+        this.logger.debug("Sending request addPet", requestParameters);
         const body = requestParameters.body;
         if (body === null || body === undefined) {
             throw new Error('Required parameter body was null or undefined when calling addPet.');
@@ -199,17 +258,59 @@ export class PetService {
         if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.startsWith('text')) {
             responseType = 'text';
         }
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            responseType = "blob" as "json";
+        }
 
-        return this.httpClient.post<any>(`${this.configuration.basePath}/pet`,
-            body,
-            {
-                responseType: <any>responseType,
-                withCredentials: this.configuration.withCredentials,
-                headers: headers,
-                observe: observe,
-                reportProgress: reportProgress
+
+      const httpOptions = {
+          responseType: <any>responseType,
+          withCredentials: this.configuration.withCredentials,
+          headers: headers,
+          observe: observe,
+          reportProgress: reportProgress
+      };
+
+        const requestPath = `${this.configuration.basePath}/pet`;
+
+        const logRequest: LogRequest = {
+            url: requestPath,
+            body: body
+        };
+
+        if (httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            return this.httpClient.get<Blob>(requestPath, httpOptions as BlobOptions).pipe(
+                concatMap(result => {
+                    return this.createImageFromBlob(result);
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        } else {
+            if(resType !== undefined) {
+                const responseObservable = this.httpClient.post<any>(requestPath ,
+          body,
+          httpOptions
+            ).pipe(
+                map(response => {
+                    if (resType) {
+                        return plainToClassFromExist(new resType(), response);
+                    } else {
+                        return response;
+                    }
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+                return responseObservable;
+            } else {
+                return this.httpClient.post<any>(requestPath, 
+                body,
+                    httpOptions
+                ).pipe(
+                    catchError(this.getErrorCallback(logRequest).bind(this))
+                );
             }
-        );
+        }
+
     }
 
     /**
@@ -219,9 +320,17 @@ export class PetService {
      * @param reportProgress flag to report request and response progress.
      */
     public deletePet(requestParameters: DeletePetRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<any>;
+    public deletePet<T>(requestParameters: DeletePetRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}, resType?: new() => T): Observable<T>;
     public deletePet(requestParameters: DeletePetRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<HttpResponse<any>>;
     public deletePet(requestParameters: DeletePetRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<HttpEvent<any>>;
-    public deletePet(requestParameters: DeletePetRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: undefined}): Observable<any> {
+    public deletePet(requestParameters: DeletePetRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: undefined}, resType?: any): Observable<any> {
+
+      if (resType !== undefined) {
+          this.logger.debug("Using extended DTO for deserialization");
+      } else {
+          this.logger.debug("There is no custom DTO");
+      }
+        this.logger.debug("Sending request deletePet", requestParameters);
         const petId = requestParameters.petId;
         if (petId === null || petId === undefined) {
             throw new Error('Required parameter petId was null or undefined when calling deletePet.');
@@ -257,16 +366,57 @@ export class PetService {
         if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.startsWith('text')) {
             responseType = 'text';
         }
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            responseType = "blob" as "json";
+        }
 
-        return this.httpClient.delete<any>(`${this.configuration.basePath}/pet/${encodeURIComponent(String(petId))}`,
-            {
-                responseType: <any>responseType,
-                withCredentials: this.configuration.withCredentials,
-                headers: headers,
-                observe: observe,
-                reportProgress: reportProgress
+
+      const httpOptions = {
+          responseType: <any>responseType,
+          withCredentials: this.configuration.withCredentials,
+          headers: headers,
+          observe: observe,
+          reportProgress: reportProgress
+      };
+
+        const requestPath = `${this.configuration.basePath}/pet/${encodeURIComponent(String(petId))}`;
+
+        const logRequest: LogRequest = {
+            url: requestPath,
+            
+        };
+
+        if (httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            return this.httpClient.get<Blob>(requestPath, httpOptions as BlobOptions).pipe(
+                concatMap(result => {
+                    return this.createImageFromBlob(result);
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        } else {
+            if(resType !== undefined) {
+                const responseObservable = this.httpClient.delete<any>(requestPath ,
+          httpOptions
+            ).pipe(
+                map(response => {
+                    if (resType) {
+                        return plainToClassFromExist(new resType(), response);
+                    } else {
+                        return response;
+                    }
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+                return responseObservable;
+            } else {
+                return this.httpClient.delete<any>(requestPath, 
+                    httpOptions
+                ).pipe(
+                    catchError(this.getErrorCallback(logRequest).bind(this))
+                );
             }
-        );
+        }
+
     }
 
     /**
@@ -277,9 +427,17 @@ export class PetService {
      * @param reportProgress flag to report request and response progress.
      */
     public findPetsByStatus(requestParameters: FindPetsByStatusRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<Array<Pet>>;
+    public findPetsByStatus<T>(requestParameters: FindPetsByStatusRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}, resType?: new() => T): Observable<T>;
     public findPetsByStatus(requestParameters: FindPetsByStatusRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<HttpResponse<Array<Pet>>>;
     public findPetsByStatus(requestParameters: FindPetsByStatusRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<HttpEvent<Array<Pet>>>;
-    public findPetsByStatus(requestParameters: FindPetsByStatusRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<any> {
+    public findPetsByStatus(requestParameters: FindPetsByStatusRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}, resType?: any): Observable<any> {
+
+      if (resType !== undefined) {
+          this.logger.debug("Using extended DTO for deserialization");
+      } else {
+          this.logger.debug("There is no custom DTO");
+      }
+        this.logger.debug("Sending request findPetsByStatus", requestParameters);
         const status = requestParameters.status;
         if (status === null || status === undefined) {
             throw new Error('Required parameter status was null or undefined when calling findPetsByStatus.');
@@ -319,17 +477,58 @@ export class PetService {
         if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.startsWith('text')) {
             responseType = 'text';
         }
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            responseType = "blob" as "json";
+        }
 
-        return this.httpClient.get<Array<Pet>>(`${this.configuration.basePath}/pet/findByStatus`,
-            {
-                params: queryParameters,
-                responseType: <any>responseType,
-                withCredentials: this.configuration.withCredentials,
-                headers: headers,
-                observe: observe,
-                reportProgress: reportProgress
+
+      const httpOptions = {
+          params: queryParameters,
+          responseType: <any>responseType,
+          withCredentials: this.configuration.withCredentials,
+          headers: headers,
+          observe: observe,
+          reportProgress: reportProgress
+      };
+
+        const requestPath = `${this.configuration.basePath}/pet/findByStatus`;
+
+        const logRequest: LogRequest = {
+            url: requestPath,
+            
+        };
+
+        if (httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            return this.httpClient.get<Blob>(requestPath, httpOptions as BlobOptions).pipe(
+                concatMap(result => {
+                    return this.createImageFromBlob(result);
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        } else {
+            if(resType !== undefined) {
+                const responseObservable = this.httpClient.get<any>(requestPath ,
+          httpOptions
+            ).pipe(
+                map(response => {
+                    if (resType) {
+                        return plainToClassFromExist(new resType(), response);
+                    } else {
+                        return response;
+                    }
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+                return responseObservable;
+            } else {
+                return this.httpClient.get<Array<Pet>>(requestPath, 
+                    httpOptions
+                ).pipe(
+                    catchError(this.getErrorCallback(logRequest).bind(this))
+                );
             }
-        );
+        }
+
     }
 
     /**
@@ -340,9 +539,17 @@ export class PetService {
      * @param reportProgress flag to report request and response progress.
      */
     public findPetsByTags(requestParameters: FindPetsByTagsRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<Array<Pet>>;
+    public findPetsByTags<T>(requestParameters: FindPetsByTagsRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}, resType?: new() => T): Observable<T>;
     public findPetsByTags(requestParameters: FindPetsByTagsRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<HttpResponse<Array<Pet>>>;
     public findPetsByTags(requestParameters: FindPetsByTagsRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<HttpEvent<Array<Pet>>>;
-    public findPetsByTags(requestParameters: FindPetsByTagsRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<any> {
+    public findPetsByTags(requestParameters: FindPetsByTagsRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}, resType?: any): Observable<any> {
+
+      if (resType !== undefined) {
+          this.logger.debug("Using extended DTO for deserialization");
+      } else {
+          this.logger.debug("There is no custom DTO");
+      }
+        this.logger.debug("Sending request findPetsByTags", requestParameters);
         const tags = requestParameters.tags;
         if (tags === null || tags === undefined) {
             throw new Error('Required parameter tags was null or undefined when calling findPetsByTags.');
@@ -382,17 +589,58 @@ export class PetService {
         if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.startsWith('text')) {
             responseType = 'text';
         }
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            responseType = "blob" as "json";
+        }
 
-        return this.httpClient.get<Array<Pet>>(`${this.configuration.basePath}/pet/findByTags`,
-            {
-                params: queryParameters,
-                responseType: <any>responseType,
-                withCredentials: this.configuration.withCredentials,
-                headers: headers,
-                observe: observe,
-                reportProgress: reportProgress
+
+      const httpOptions = {
+          params: queryParameters,
+          responseType: <any>responseType,
+          withCredentials: this.configuration.withCredentials,
+          headers: headers,
+          observe: observe,
+          reportProgress: reportProgress
+      };
+
+        const requestPath = `${this.configuration.basePath}/pet/findByTags`;
+
+        const logRequest: LogRequest = {
+            url: requestPath,
+            
+        };
+
+        if (httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            return this.httpClient.get<Blob>(requestPath, httpOptions as BlobOptions).pipe(
+                concatMap(result => {
+                    return this.createImageFromBlob(result);
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        } else {
+            if(resType !== undefined) {
+                const responseObservable = this.httpClient.get<any>(requestPath ,
+          httpOptions
+            ).pipe(
+                map(response => {
+                    if (resType) {
+                        return plainToClassFromExist(new resType(), response);
+                    } else {
+                        return response;
+                    }
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+                return responseObservable;
+            } else {
+                return this.httpClient.get<Array<Pet>>(requestPath, 
+                    httpOptions
+                ).pipe(
+                    catchError(this.getErrorCallback(logRequest).bind(this))
+                );
             }
-        );
+        }
+
     }
 
     /**
@@ -403,9 +651,17 @@ export class PetService {
      * @param reportProgress flag to report request and response progress.
      */
     public getPetById(requestParameters: GetPetByIdRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<Pet>;
+    public getPetById<T>(requestParameters: GetPetByIdRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}, resType?: new() => T): Observable<T>;
     public getPetById(requestParameters: GetPetByIdRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<HttpResponse<Pet>>;
     public getPetById(requestParameters: GetPetByIdRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<HttpEvent<Pet>>;
-    public getPetById(requestParameters: GetPetByIdRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<any> {
+    public getPetById(requestParameters: GetPetByIdRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}, resType?: any): Observable<any> {
+
+      if (resType !== undefined) {
+          this.logger.debug("Using extended DTO for deserialization");
+      } else {
+          this.logger.debug("There is no custom DTO");
+      }
+        this.logger.debug("Sending request getPetById", requestParameters);
         const petId = requestParameters.petId;
         if (petId === null || petId === undefined) {
             throw new Error('Required parameter petId was null or undefined when calling getPetById.');
@@ -439,16 +695,57 @@ export class PetService {
         if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.startsWith('text')) {
             responseType = 'text';
         }
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            responseType = "blob" as "json";
+        }
 
-        return this.httpClient.get<Pet>(`${this.configuration.basePath}/pet/${encodeURIComponent(String(petId))}`,
-            {
-                responseType: <any>responseType,
-                withCredentials: this.configuration.withCredentials,
-                headers: headers,
-                observe: observe,
-                reportProgress: reportProgress
+
+      const httpOptions = {
+          responseType: <any>responseType,
+          withCredentials: this.configuration.withCredentials,
+          headers: headers,
+          observe: observe,
+          reportProgress: reportProgress
+      };
+
+        const requestPath = `${this.configuration.basePath}/pet/${encodeURIComponent(String(petId))}`;
+
+        const logRequest: LogRequest = {
+            url: requestPath,
+            
+        };
+
+        if (httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            return this.httpClient.get<Blob>(requestPath, httpOptions as BlobOptions).pipe(
+                concatMap(result => {
+                    return this.createImageFromBlob(result);
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        } else {
+            if(resType !== undefined) {
+                const responseObservable = this.httpClient.get<any>(requestPath ,
+          httpOptions
+            ).pipe(
+                map(response => {
+                    if (resType) {
+                        return plainToClassFromExist(new resType(), response);
+                    } else {
+                        return response;
+                    }
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+                return responseObservable;
+            } else {
+                return this.httpClient.get<Pet>(requestPath, 
+                    httpOptions
+                ).pipe(
+                    catchError(this.getErrorCallback(logRequest).bind(this))
+                );
             }
-        );
+        }
+
     }
 
     /**
@@ -458,9 +755,17 @@ export class PetService {
      * @param reportProgress flag to report request and response progress.
      */
     public updatePet(requestParameters: UpdatePetRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<any>;
+    public updatePet<T>(requestParameters: UpdatePetRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}, resType?: new() => T): Observable<T>;
     public updatePet(requestParameters: UpdatePetRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<HttpResponse<any>>;
     public updatePet(requestParameters: UpdatePetRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<HttpEvent<any>>;
-    public updatePet(requestParameters: UpdatePetRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: undefined}): Observable<any> {
+    public updatePet(requestParameters: UpdatePetRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: undefined}, resType?: any): Observable<any> {
+
+      if (resType !== undefined) {
+          this.logger.debug("Using extended DTO for deserialization");
+      } else {
+          this.logger.debug("There is no custom DTO");
+      }
+        this.logger.debug("Sending request updatePet", requestParameters);
         const body = requestParameters.body;
         if (body === null || body === undefined) {
             throw new Error('Required parameter body was null or undefined when calling updatePet.');
@@ -502,17 +807,59 @@ export class PetService {
         if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.startsWith('text')) {
             responseType = 'text';
         }
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            responseType = "blob" as "json";
+        }
 
-        return this.httpClient.put<any>(`${this.configuration.basePath}/pet`,
-            body,
-            {
-                responseType: <any>responseType,
-                withCredentials: this.configuration.withCredentials,
-                headers: headers,
-                observe: observe,
-                reportProgress: reportProgress
+
+      const httpOptions = {
+          responseType: <any>responseType,
+          withCredentials: this.configuration.withCredentials,
+          headers: headers,
+          observe: observe,
+          reportProgress: reportProgress
+      };
+
+        const requestPath = `${this.configuration.basePath}/pet`;
+
+        const logRequest: LogRequest = {
+            url: requestPath,
+            body: body
+        };
+
+        if (httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            return this.httpClient.get<Blob>(requestPath, httpOptions as BlobOptions).pipe(
+                concatMap(result => {
+                    return this.createImageFromBlob(result);
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        } else {
+            if(resType !== undefined) {
+                const responseObservable = this.httpClient.put<any>(requestPath ,
+          body,
+          httpOptions
+            ).pipe(
+                map(response => {
+                    if (resType) {
+                        return plainToClassFromExist(new resType(), response);
+                    } else {
+                        return response;
+                    }
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+                return responseObservable;
+            } else {
+                return this.httpClient.put<any>(requestPath, 
+                body,
+                    httpOptions
+                ).pipe(
+                    catchError(this.getErrorCallback(logRequest).bind(this))
+                );
             }
-        );
+        }
+
     }
 
     /**
@@ -522,9 +869,17 @@ export class PetService {
      * @param reportProgress flag to report request and response progress.
      */
     public updatePetWithForm(requestParameters: UpdatePetWithFormRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<any>;
+    public updatePetWithForm<T>(requestParameters: UpdatePetWithFormRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}, resType?: new() => T): Observable<T>;
     public updatePetWithForm(requestParameters: UpdatePetWithFormRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<HttpResponse<any>>;
     public updatePetWithForm(requestParameters: UpdatePetWithFormRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<HttpEvent<any>>;
-    public updatePetWithForm(requestParameters: UpdatePetWithFormRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: undefined}): Observable<any> {
+    public updatePetWithForm(requestParameters: UpdatePetWithFormRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: undefined}, resType?: any): Observable<any> {
+
+      if (resType !== undefined) {
+          this.logger.debug("Using extended DTO for deserialization");
+      } else {
+          this.logger.debug("There is no custom DTO");
+      }
+        this.logger.debug("Sending request updatePetWithForm", requestParameters);
         const petId = requestParameters.petId;
         if (petId === null || petId === undefined) {
             throw new Error('Required parameter petId was null or undefined when calling updatePetWithForm.');
@@ -580,17 +935,59 @@ export class PetService {
         if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.startsWith('text')) {
             responseType = 'text';
         }
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            responseType = "blob" as "json";
+        }
 
-        return this.httpClient.post<any>(`${this.configuration.basePath}/pet/${encodeURIComponent(String(petId))}`,
-            convertFormParamsToString ? formParams.toString() : formParams,
-            {
-                responseType: <any>responseType,
-                withCredentials: this.configuration.withCredentials,
-                headers: headers,
-                observe: observe,
-                reportProgress: reportProgress
+
+      const httpOptions = {
+          responseType: <any>responseType,
+          withCredentials: this.configuration.withCredentials,
+          headers: headers,
+          observe: observe,
+          reportProgress: reportProgress
+      };
+
+        const requestPath = `${this.configuration.basePath}/pet/${encodeURIComponent(String(petId))}`;
+
+        const logRequest: LogRequest = {
+            url: requestPath,
+            body: convertFormParamsToString ? formParams.toString() : formParams
+        };
+
+        if (httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            return this.httpClient.get<Blob>(requestPath, httpOptions as BlobOptions).pipe(
+                concatMap(result => {
+                    return this.createImageFromBlob(result);
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        } else {
+            if(resType !== undefined) {
+                const responseObservable = this.httpClient.post<any>(requestPath ,
+          convertFormParamsToString ? formParams.toString() : formParams,
+          httpOptions
+            ).pipe(
+                map(response => {
+                    if (resType) {
+                        return plainToClassFromExist(new resType(), response);
+                    } else {
+                        return response;
+                    }
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+                return responseObservable;
+            } else {
+                return this.httpClient.post<any>(requestPath, 
+                convertFormParamsToString ? formParams.toString() : formParams,
+                    httpOptions
+                ).pipe(
+                    catchError(this.getErrorCallback(logRequest).bind(this))
+                );
             }
-        );
+        }
+
     }
 
     /**
@@ -600,9 +997,17 @@ export class PetService {
      * @param reportProgress flag to report request and response progress.
      */
     public uploadFile(requestParameters: UploadFileRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json'}): Observable<ApiResponse>;
+    public uploadFile<T>(requestParameters: UploadFileRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json'}, resType?: new() => T): Observable<T>;
     public uploadFile(requestParameters: UploadFileRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json'}): Observable<HttpResponse<ApiResponse>>;
     public uploadFile(requestParameters: UploadFileRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json'}): Observable<HttpEvent<ApiResponse>>;
-    public uploadFile(requestParameters: UploadFileRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json'}): Observable<any> {
+    public uploadFile(requestParameters: UploadFileRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json'}, resType?: any): Observable<any> {
+
+      if (resType !== undefined) {
+          this.logger.debug("Using extended DTO for deserialization");
+      } else {
+          this.logger.debug("There is no custom DTO");
+      }
+        this.logger.debug("Sending request uploadFile", requestParameters);
         const petId = requestParameters.petId;
         if (petId === null || petId === undefined) {
             throw new Error('Required parameter petId was null or undefined when calling uploadFile.');
@@ -662,17 +1067,59 @@ export class PetService {
         if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.startsWith('text')) {
             responseType = 'text';
         }
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            responseType = "blob" as "json";
+        }
 
-        return this.httpClient.post<ApiResponse>(`${this.configuration.basePath}/pet/${encodeURIComponent(String(petId))}/uploadImage`,
-            convertFormParamsToString ? formParams.toString() : formParams,
-            {
-                responseType: <any>responseType,
-                withCredentials: this.configuration.withCredentials,
-                headers: headers,
-                observe: observe,
-                reportProgress: reportProgress
+
+      const httpOptions = {
+          responseType: <any>responseType,
+          withCredentials: this.configuration.withCredentials,
+          headers: headers,
+          observe: observe,
+          reportProgress: reportProgress
+      };
+
+        const requestPath = `${this.configuration.basePath}/pet/${encodeURIComponent(String(petId))}/uploadImage`;
+
+        const logRequest: LogRequest = {
+            url: requestPath,
+            body: convertFormParamsToString ? formParams.toString() : formParams
+        };
+
+        if (httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            return this.httpClient.get<Blob>(requestPath, httpOptions as BlobOptions).pipe(
+                concatMap(result => {
+                    return this.createImageFromBlob(result);
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        } else {
+            if(resType !== undefined) {
+                const responseObservable = this.httpClient.post<any>(requestPath ,
+          convertFormParamsToString ? formParams.toString() : formParams,
+          httpOptions
+            ).pipe(
+                map(response => {
+                    if (resType) {
+                        return plainToClassFromExist(new resType(), response);
+                    } else {
+                        return response;
+                    }
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+                return responseObservable;
+            } else {
+                return this.httpClient.post<ApiResponse>(requestPath, 
+                convertFormParamsToString ? formParams.toString() : formParams,
+                    httpOptions
+                ).pipe(
+                    catchError(this.getErrorCallback(logRequest).bind(this))
+                );
             }
-        );
+        }
+
     }
 
 }

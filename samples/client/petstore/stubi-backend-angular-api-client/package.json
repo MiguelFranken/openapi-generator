@@ -1,6 +1,6 @@
 {
   "name": "@miguelfranken/stubi-backend-angular-client",
-  "version": "0.0.1-SNAPSHOT.202004011524",
+  "version": "0.0.1-SNAPSHOT.202004011549",
   "description": "OpenAPI client for @miguelfranken/stubi-backend-angular-client",
   "author": "OpenAPI-Generator Contributors",
   "keywords": [
@@ -18,6 +18,10 @@
     "core-js": "^2.4.0",
     "reflect-metadata": "^0.1.3",
     "rxjs": "^6.5.3"
+  },
+  "dependencies": {
+    "@upe/logger": "^2.0.3",
+    "class-transformer": "^0.2.3"
   },
   "devDependencies": {
     "@angular/common": "^9.1.0",
