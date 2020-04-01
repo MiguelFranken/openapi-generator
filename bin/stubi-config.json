@@ -1,0 +1,10 @@
+{
+  "npmName": "@miguelfranken/stubi-backend-angular-client",
+  "npmRepository": "git://github.com/miguelfranken/stubi-backend-angular-client",
+  "npmVersion": "0.0.1",
+  "snapshot": "true",
+  "supportES6": "true",
+  "useSingleRequestParameter": "true",
+  "ngVersion": "9.1.0",
+  "fileNaming": "kebab-case"
+}
