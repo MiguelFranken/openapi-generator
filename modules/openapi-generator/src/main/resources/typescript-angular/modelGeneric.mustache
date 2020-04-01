@@ -10,6 +10,7 @@ export class {{classname}} { {{>modelGenericAdditionalProperties}}
     {{/description}}
     {{#isDate}}@Type(() => Date){{/isDate}}
     {{#isDateTime}}@Type(() => Date){{/isDateTime}}
+    {{^isPrimitiveType}}{{#isModel}}@Type(() => {{{dataType}}}){{/isModel}}{{^isModel}}@Type(() => {{{classVarName}}}){{/isModel}}{{/isPrimitiveType}}
     {{#isReadOnly}}readonly {{/isReadOnly}}{{{name}}}{{^required}}?{{/required}}: {{#isEnum}}{{{datatypeWithEnum}}}{{/isEnum}}{{^isEnum}}{{{dataType}}}{{/isEnum}}{{#isNullable}} | null{{/isNullable}};
 {{/vars}}
 }{{>modelGenericEnums}}

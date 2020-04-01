@@ -18,25 +18,32 @@ import { Tag } from './tag';
  */
 import { Type } from "class-transformer";
 
+// @dynamic
 export class Pet { 
+    
     
     
     id?: number;
     
     
+    @Type(() => Category)
     category?: Category;
+    
     
     
     name: string;
     
     
+    
     photoUrls: Array<string>;
     
     
+    @Type(() => Pet)
     tags?: Array<Tag>;
     /**
      * pet status in the store
      */
+    
     
     
     status?: Pet.StatusEnum;

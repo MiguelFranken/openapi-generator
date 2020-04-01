@@ -16,25 +16,32 @@
  */
 import { Type } from "class-transformer";
 
+// @dynamic
 export class Order { 
+    
     
     
     id?: number;
     
     
+    
     petId?: number;
+    
     
     
     quantity?: number;
     
     @Type(() => Date)
+    
     shipDate?: Date;
     /**
      * Order Status
      */
     
     
+    
     status?: Order.StatusEnum;
+    
     
     
     complete?: boolean;

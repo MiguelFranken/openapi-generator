@@ -16,10 +16,13 @@
  */
 import { Type } from "class-transformer";
 
+// @dynamic
 export class Category { 
     
     
+    
     id?: number;
+    
     
     
     name?: string;

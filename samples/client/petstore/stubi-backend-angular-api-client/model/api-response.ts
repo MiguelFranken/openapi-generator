@@ -16,13 +16,17 @@
  */
 import { Type } from "class-transformer";
 
+// @dynamic
 export class ApiResponse { 
+    
     
     
     code?: number;
     
     
+    
     type?: string;
+    
     
     
     message?: string;
