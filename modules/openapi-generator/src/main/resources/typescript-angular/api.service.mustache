@@ -2,8 +2,9 @@
 /* tslint:disable:no-unused-variable member-ordering */
 
 import { Inject, Injectable, Optional }                      from '@angular/core';
+import { Logger } from "@upe/logger";
 {{#useHttpClient}}
-import { HttpClient, HttpHeaders, HttpParams,
+import { HttpClient, HttpHeaders, HttpParams, HttpErrorResponse,
          HttpResponse, HttpEvent, HttpParameterCodec }       from '@angular/common/http';
 import { CustomHttpParameterCodec }                          from '../encoder';
 {{/useHttpClient}}
@@ -13,11 +14,10 @@ import { Http, Headers, URLSearchParams,
         Response, ResponseContentType, QueryEncoder }        from '@angular/http';
 import { CustomQueryEncoderHelper }                          from '../encoder';
 {{/useHttpClient}}
-{{^useRxJS6}}
-import { Observable }                                        from 'rxjs/Observable';
-{{/useRxJS6}}
 {{#useRxJS6}}
-import { Observable }                                        from 'rxjs';
+import { Observable, throwError, Subject } from 'rxjs';
+import { plainToClassFromExist } from "class-transformer";
+import { catchError, map, concatMap } from "rxjs/operators";
 {{/useRxJS6}}
 {{^useHttpClient}}
 import '../rxjs-operators';
@@ -27,7 +27,7 @@ import '../rxjs-operators';
 import { {{classname}} } from '../model/models';
 {{/imports}}
 
-import { BASE_PATH, COLLECTION_FORMATS }                     from '../variables';
+import { BASE_PATH, COLLECTION_FORMATS, HttpImage }          from '../variables';
 import { Configuration }                                     from '../configuration';
 {{#withInterfaces}}
 import {
@@ -35,6 +35,19 @@ import {
     {{#prefixParameterInterfaces}}{{classname}}{{/prefixParameterInterfaces}}{{operationIdCamelCase}}RequestParams{{/allParams.0}}{{/operation}}{{/operations}}{{/useSingleRequestParameter}}
 } from './{{classFilename}}Interface';
 {{/withInterfaces}}
+
+interface LogRequest {
+    url: string;
+    params?: HttpParams;
+    body?: any;
+}
+
+interface BlobOptions {
+    params?: HttpParams | {
+        [param: string]: string | string[];
+    };
+    responseType: "json"; // "blob" as "json"
+}
 
 {{#operations}}
 
@@ -84,7 +97,42 @@ export class {{classname}} {
     public encoder: QueryEncoder;
 {{/useHttpClient}}
 
-    constructor(protected {{#useHttpClient}}httpClient: HttpClient{{/useHttpClient}}{{^useHttpClient}}http: Http{{/useHttpClient}}, @Optional()@Inject(BASE_PATH) basePath: string, @Optional() configuration: Configuration) {
+    private logger: Logger = new Logger({ name: "{{classname}}", flags: ["service"] });
+
+    /**
+     * Executed when an HTTP error occurred
+     */
+    private getErrorCallback(request: LogRequest) {
+        return (fullHttpErrorResponse: HttpErrorResponse) => {
+            const errorDto = fullHttpErrorResponse.error;
+            this.logger.error("Error occurred", {
+                request,
+                error: errorDto
+            });
+            return throwError(errorDto);
+        };
+    }
+
+    /**
+    * Transforms asynchronously a blob into an image using the file reader
+    */
+    private createImageFromBlob(image: Blob): Observable<HttpImage> {
+        const reader = new FileReader();
+        if (image) {
+            reader.readAsDataURL(image);
+        }
+        const subject = new Subject<string | ArrayBuffer>();
+        reader.addEventListener("load", () => {
+            subject.next(reader.result);
+        }, false);
+        return subject.asObservable();
+    }
+
+    constructor(
+      protected {{#useHttpClient}}httpClient: HttpClient{{/useHttpClient}}{{^useHttpClient}}http: Http{{/useHttpClient}},
+      @Optional()@Inject(BASE_PATH) basePath: string,
+      @Optional() configuration: Configuration
+    ) {
         if (configuration) {
             this.configuration = configuration;
         }
@@ -213,13 +261,31 @@ export class {{classname}} {
      */
     {{#useHttpClient}}
     public {{nickname}}({{^useSingleRequestParameter}}{{#allParams}}{{paramName}}{{^required}}?{{/required}}: {{{dataType}}}, {{/allParams}}{{/useSingleRequestParameter}}{{#useSingleRequestParameter}}{{#allParams.0}}requestParameters: {{#prefixParameterInterfaces}}{{classname}}{{/prefixParameterInterfaces}}{{operationIdCamelCase}}RequestParams, {{/allParams.0}}{{/useSingleRequestParameter}}observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: {{#produces}}'{{mediaType}}'{{#hasMore}} | {{/hasMore}}{{/produces}}{{^produces}}undefined{{/produces}}}): Observable<{{#returnType}}{{{returnType}}}{{#isResponseTypeFile}}|undefined{{/isResponseTypeFile}}{{/returnType}}{{^returnType}}any{{/returnType}}>;
+    public {{nickname}}<T>({{^useSingleRequestParameter}}{{#allParams}}{{paramName}}{{^required}}?{{/required}}: {{{dataType}}}, {{/allParams}}{{/useSingleRequestParameter}}{{#useSingleRequestParameter}}{{#allParams.0}}requestParameters: {{#prefixParameterInterfaces}}{{classname}}{{/prefixParameterInterfaces}}{{operationIdCamelCase}}RequestParams, {{/allParams.0}}{{/useSingleRequestParameter}}observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: {{#produces}}'{{mediaType}}'{{#hasMore}} | {{/hasMore}}{{/produces}}{{^produces}}undefined{{/produces}}}, resType?: new() => T): Observable<T>;
     public {{nickname}}({{^useSingleRequestParameter}}{{#allParams}}{{paramName}}{{^required}}?{{/required}}: {{{dataType}}}, {{/allParams}}{{/useSingleRequestParameter}}{{#useSingleRequestParameter}}{{#allParams.0}}requestParameters: {{#prefixParameterInterfaces}}{{classname}}{{/prefixParameterInterfaces}}{{operationIdCamelCase}}RequestParams, {{/allParams.0}}{{/useSingleRequestParameter}}observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: {{#produces}}'{{mediaType}}'{{#hasMore}} | {{/hasMore}}{{/produces}}{{^produces}}undefined{{/produces}}}): Observable<HttpResponse<{{#returnType}}{{{returnType}}}{{#isResponseTypeFile}}|undefined{{/isResponseTypeFile}}{{/returnType}}{{^returnType}}any{{/returnType}}>>;
     public {{nickname}}({{^useSingleRequestParameter}}{{#allParams}}{{paramName}}{{^required}}?{{/required}}: {{{dataType}}}, {{/allParams}}{{/useSingleRequestParameter}}{{#useSingleRequestParameter}}{{#allParams.0}}requestParameters: {{#prefixParameterInterfaces}}{{classname}}{{/prefixParameterInterfaces}}{{operationIdCamelCase}}RequestParams, {{/allParams.0}}{{/useSingleRequestParameter}}observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: {{#produces}}'{{mediaType}}'{{#hasMore}} | {{/hasMore}}{{/produces}}{{^produces}}undefined{{/produces}}}): Observable<HttpEvent<{{#returnType}}{{{returnType}}}{{#isResponseTypeFile}}|undefined{{/isResponseTypeFile}}{{/returnType}}{{^returnType}}any{{/returnType}}>>;
-    public {{nickname}}({{^useSingleRequestParameter}}{{#allParams}}{{paramName}}{{^required}}?{{/required}}: {{{dataType}}}, {{/allParams}}{{/useSingleRequestParameter}}{{#useSingleRequestParameter}}{{#allParams.0}}requestParameters: {{#prefixParameterInterfaces}}{{classname}}{{/prefixParameterInterfaces}}{{operationIdCamelCase}}RequestParams, {{/allParams.0}}{{/useSingleRequestParameter}}observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: {{#produces}}'{{mediaType}}'{{#hasMore}} | {{/hasMore}}{{/produces}}{{^produces}}undefined{{/produces}}}): Observable<any> {
+    public {{nickname}}({{^useSingleRequestParameter}}{{#allParams}}{{paramName}}{{^required}}?{{/required}}: {{{dataType}}}, {{/allParams}}{{/useSingleRequestParameter}}{{#useSingleRequestParameter}}{{#allParams.0}}requestParameters: {{#prefixParameterInterfaces}}{{classname}}{{/prefixParameterInterfaces}}{{operationIdCamelCase}}RequestParams, {{/allParams.0}}{{/useSingleRequestParameter}}observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: {{#produces}}'{{mediaType}}'{{#hasMore}} | {{/hasMore}}{{/produces}}{{^produces}}undefined{{/produces}}}, resType?: any): Observable<any> {
     {{/useHttpClient}}
     {{^useHttpClient}}
     public {{nickname}}WithHttpInfo({{^useSingleRequestParameter}}{{#allParams}}{{paramName}}{{^required}}?{{/required}}: {{{dataType}}}, {{/allParams}}{{/useSingleRequestParameter}}{{#useSingleRequestParameter}}{{#allParams.0}}requestParameters: {{#prefixParameterInterfaces}}{{classname}}{{/prefixParameterInterfaces}}{{operationIdCamelCase}}RequestParams, {{/allParams.0}}{{/useSingleRequestParameter}}extraHttpRequestParams?: RequestOptionsArgs, options?: {httpHeaderAccept?: {{#produces}}'{{mediaType}}'{{#hasMore}} | {{/hasMore}}{{/produces}}{{^produces}}undefined{{/produces}}}): Observable<Response> {
     {{/useHttpClient}}
+
+      if (resType !== undefined) {
+          this.logger.debug("Using extended DTO for deserialization");
+      } else {
+          this.logger.debug("There is no custom DTO");
+      }
+{{#allParams.0}}
+  {{#useSingleRequestParameter}}
+        this.logger.debug("Sending request {{nickname}}", requestParameters);
+  {{/useSingleRequestParameter}}
+  {{^useSingleRequestParameter}}
+        this.logger.error("The generator was only extended to work with the useSingleRequestParameter option. See api.service.mustache!");
+  {{/useSingleRequestParameter}}
+{{/allParams.0}}
+{{^allParams.0}}
+        this.logger.debug("Sending request {{nickname}}");
+{{/allParams.0}}
 {{#allParams}}
 {{#useSingleRequestParameter}}
         const {{paramName}} = requestParameters.{{paramName}};
@@ -429,26 +495,68 @@ export class {{classname}} {
         if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.startsWith('text')) {
             responseType = 'text';
         }
+    {{/isResponseFile}}
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            responseType = "blob" as "json";
+        }
 
-    {{/isResponseFile}}
-        return this.httpClient.{{httpMethod}}{{^isResponseFile}}<{{#returnType}}{{{returnType}}}{{#isResponseTypeFile}}|undefined{{/isResponseTypeFile}}{{/returnType}}{{^returnType}}any{{/returnType}}>{{/isResponseFile}}(`${this.configuration.basePath}{{{path}}}`,{{#isBodyAllowed}}
-            {{#bodyParam}}{{paramName}}{{/bodyParam}}{{^bodyParam}}{{#hasFormParams}}convertFormParamsToString ? formParams.toString() : formParams{{/hasFormParams}}{{^hasFormParams}}null{{/hasFormParams}}{{/bodyParam}},{{/isBodyAllowed}}
-            {
-    {{#hasQueryParams}}
-                params: queryParameters,
-    {{/hasQueryParams}}
-    {{#isResponseFile}}
-                responseType: "blob",
-    {{/isResponseFile}}
-    {{^isResponseFile}}
-                responseType: <any>responseType,
-    {{/isResponseFile}}
-                withCredentials: this.configuration.withCredentials,
-                headers: headers,
-                observe: observe,
-                reportProgress: reportProgress
+
+      const httpOptions = {
+{{#hasQueryParams}}
+          params: queryParameters,
+{{/hasQueryParams}}
+{{#isResponseFile}}
+          responseType: "blob",
+{{/isResponseFile}}
+{{^isResponseFile}}
+          responseType: <any>responseType,
+{{/isResponseFile}}
+          withCredentials: this.configuration.withCredentials,
+          headers: headers,
+          observe: observe,
+          reportProgress: reportProgress
+      };
+
+        const requestPath = `${this.configuration.basePath}{{{path}}}`;
+
+        const logRequest: LogRequest = {
+            url: requestPath,
+            {{#isBodyAllowed}}body: {{#bodyParam}}{{paramName}}{{/bodyParam}}{{^bodyParam}}{{#hasFormParams}}convertFormParamsToString ? formParams.toString() : formParams{{/hasFormParams}}{{^hasFormParams}}null{{/hasFormParams}}{{/bodyParam}}{{/isBodyAllowed}}
+        };
+
+        if (httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            return this.httpClient.get<Blob>(requestPath, httpOptions as BlobOptions).pipe(
+                concatMap(result => {
+                    return this.createImageFromBlob(result);
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        } else {
+            if(resType !== undefined) {
+                const responseObservable = this.httpClient.{{httpMethod}}<any>(requestPath ,{{#isBodyAllowed}}
+          {{#bodyParam}}{{paramName}}{{/bodyParam}}{{^bodyParam}}{{#hasFormParams}}convertFormParamsToString ? formParams.toString() : formParams{{/hasFormParams}}{{^hasFormParams}}null{{/hasFormParams}}{{/bodyParam}},{{/isBodyAllowed}}
+          httpOptions
+            ).pipe(
+                map(response => {
+                    if (resType) {
+                        return plainToClassFromExist(new resType(), response);
+                    } else {
+                        return response;
+                    }
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+                return responseObservable;
+            } else {
+                return this.httpClient.{{httpMethod}}{{^isResponseFile}}<{{#returnType}}{{{returnType}}}{{#isResponseTypeFile}}|undefined{{/isResponseTypeFile}}{{/returnType}}{{^returnType}}any{{/returnType}}>{{/isResponseFile}}(requestPath, {{#isBodyAllowed}}
+                {{#bodyParam}}{{paramName}}{{/bodyParam}}{{^bodyParam}}{{#hasFormParams}}convertFormParamsToString ? formParams.toString() : formParams{{/hasFormParams}}{{^hasFormParams}}null{{/hasFormParams}}{{/bodyParam}},{{/isBodyAllowed}}
+                    httpOptions
+                ).pipe(
+                    catchError(this.getErrorCallback(logRequest).bind(this))
+                );
             }
-        );
+        }
+
 {{/useHttpClient}}
 {{^useHttpClient}}
         let requestOptions: RequestOptionsArgs = new RequestOptions({
