@@ -4,8 +4,6 @@ import { HttpClient } from '@angular/common/http';
 
 
 import { PetService } from './api/pet.service';
-import { StoreService } from './api/store.service';
-import { UserService } from './api/user.service';
 
 @NgModule({
   imports:      [],

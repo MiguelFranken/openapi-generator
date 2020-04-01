@@ -19,7 +19,7 @@ import { Type } from "class-transformer";
     {{/isModel}}
     {{^isModel}}
       export function Type{{classname}}{{{name}}}() {
-        return {{{classVarName}}};
+        return {{{complexType}}};
       }
     {{/isModel}}
   {{/isPrimitiveType}}
