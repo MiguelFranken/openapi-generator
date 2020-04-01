@@ -16,6 +16,10 @@
  */
 import { Type } from "class-transformer";
 
+    export function TypeOrdershipDate() {
+      return Date;
+    }
+
 // @dynamic
 export class Order { 
     
@@ -31,7 +35,7 @@ export class Order {
     
     quantity?: number;
     
-    @Type(() => Date)
+    @Type(TypeOrdershipDate)
     
     shipDate?: Date;
     /**
