@@ -1,32 +1,20 @@
 #!/bin/sh
 
-SCRIPT="$0"
-echo "# START SCRIPT: $SCRIPT"
-
-while [ -h "$SCRIPT" ] ; do
-  ls=`ls -ld "$SCRIPT"`
-  link=`expr "$ls" : '.*-> \(.*\)$'`
-  if expr "$link" : '/.*' > /dev/null; then
-    SCRIPT="$link"
-  else
-    SCRIPT=`dirname "$SCRIPT"`/"$link"
-  fi
-done
-
-if [ ! -d "${APP_DIR}" ]; then
-  APP_DIR=`dirname "$SCRIPT"`/..
-  APP_DIR=`cd "${APP_DIR}"; pwd`
-fi
-
 executable="./modules/openapi-generator-cli/target/openapi-generator-cli.jar"
 
 if [ ! -f "$executable" ]
 then
-  mvn -B clean package
+  mvn -B clean package -DskipTests
 fi
 
 # if you've executed sbt assembly previously it will use that instead.
-export JAVA_OPTS="${JAVA_OPTS} -Xmx1024M -DloggerPath=conf/log4j.properties -Dlog.level=debug"
-ags="generate -i modules/openapi-generator/src/test/resources/2_0/petstore.yaml -g typescript-angular -t modules/openapi-generator/src/main/resources/typescript-angular -c bin/stubi-config.json -o samples/client/petstore/stubi-backend-angular-api-client $@"
+if [ "$#" -ne 1 ]
+then
+  export JAVA_OPTS="${JAVA_OPTS} -Xmx1024M -DloggerPath=conf/log4j.properties"
+else
+  export JAVA_OPTS="${JAVA_OPTS} -Xmx1024M -DloggerPath=conf/log4j.properties -Dlog.level=debug -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
+fi
+
+ags="generate -i modules/openapi-generator/src/test/resources/2_0/petstore.yaml -g typescript-angular -t modules/openapi-generator/src/main/resources/typescript-angular -c bin/stubi-config.json -o samples/client/petstore/stubi-backend-angular-api-client"
 
 java $JAVA_OPTS -jar $executable $ags

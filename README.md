@@ -19,3 +19,7 @@
 This generates the [sample](./samples/client/petstore/stubi-backend-angular-api-client).
 
 Once the project was built you can test out template changes which don't require recompilation of the entire project just by executing `./bin/stubi.sh`  
+
+## Debugging
+- `./bin/stubi.sh debug` in root directory
+- Run [Remote Debugger](./remote.png) in IntelliJ
