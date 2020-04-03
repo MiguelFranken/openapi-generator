@@ -3,7 +3,7 @@ import { Configuration } from './configuration';
 import { HttpClient } from '@angular/common/http';
 
 
-import { PetService } from './api/pet.service';
+import { DefaultService } from './api/default.service';
 
 @NgModule({
   imports:      [],
