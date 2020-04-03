@@ -24,7 +24,7 @@ export class Category {
     
     
     
-    id?: number;
+    id: number;
     /**
      * Content of the news item
      * <p>Example: Hallo Welt</p>

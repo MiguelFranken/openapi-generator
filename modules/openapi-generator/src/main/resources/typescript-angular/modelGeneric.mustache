@@ -1,12 +1,10 @@
 // @dynamic
 export class {{classname}} { {{>modelGenericAdditionalProperties}}
 {{#vars}}
-    {{#example}}
     /**
      {{#description}}* {{{description}}}{{/description}}
      * <p>Example: {{{example}}}</p>
      */
-    {{/example}}
     {{#isDate}}@Type(Type{{classname}}{{{name}}}){{/isDate}}
     {{#isDateTime}}@Type(Type{{classname}}{{{name}}}){{/isDateTime}}
     {{^isPrimitiveType}}@Type(Type{{classname}}{{{name}}}){{/isPrimitiveType}}
