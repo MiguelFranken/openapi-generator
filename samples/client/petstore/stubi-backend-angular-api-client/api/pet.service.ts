@@ -140,23 +140,42 @@ export class PetService {
     }
 
     /**
-     * Add a new pet to the store
-     * <p></p>
-     * <p></p>
-     * <b>Example Response:</b><br>
-     * <pre>
-     * {
+  * Add a new pet to the store
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <pre>
+  * {
   "name" : "Hallo Welt",
   "id" : 0
 }
-     * </pre>
-     * <p></p>
-     * <p><b>Possible HTTP Response Statuses:</b>
-     * <br>- 202 (Ok) with body {@link Category}<br>- 405 (Invalid input)
-     * <p></p>
-     * @param requestOptions TODO
-     */
+  * </pre>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 202 (Ok) with body {@link Category}<br>- 405 (Invalid input)
+  * <p></p>
+  * @param requestOptions TODO
+  */
+
     public addPet(requestOptions?: IRequestOptions): Observable<Category>
+    /**
+  * Add a new pet to the store
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <pre>
+  * {
+  "name" : "Hallo Welt",
+  "id" : 0
+}
+  * </pre>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 202 (Ok) with body {@link Category}<br>- 405 (Invalid input)
+  * <p></p>
+  * @param requestOptions TODO
+  */
+
     public addPet<T>(requestOptions?: IRequestOptionsWithResponseType<T>): Observable<T>
     public addPet<T>(requestOptions?: any): Observable<Category> {
         if (!!requestOptions && !!requestOptions.debugging) {

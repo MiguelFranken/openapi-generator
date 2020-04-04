@@ -197,33 +197,9 @@ export class {{classname}} {
     }
 
 {{#operation}}
-    /**
-{{#summary}}
-     * {{summary}}
-{{/summary}}
-{{#notes}}
-     * <p></p>
-     * <p></p>
-{{/notes}}
-{{#notes}}
-     * {{{notes}}}
-{{/notes}}
-     * <p></p>
-     * <p></p>
-     * <b>Example Response:</b><br>{{#examples.0}}
-     * <pre>
-     * {{{example}}}
-     * </pre>{{/examples.0}}
-     * <p></p>
-     * <p><b>Possible HTTP Response Statuses:</b>
-     * {{#responses}}<br>- {{{code}}} ({{{message}}}){{#hasMore}} with body {@link {{baseType}}}{{/hasMore}}{{/responses}}
-     * <p></p>
-     {{#allParams.0}}
-     * @param requestParameters TODO
-     {{/allParams.0}}
-     * @param requestOptions TODO
-     */
+    {{>documentation}}
     public {{nickname}}({{#allParams.0}}requestParameters: {{#prefixParameterInterfaces}}{{classname}}{{/prefixParameterInterfaces}}{{operationIdCamelCase}}RequestParams, {{/allParams.0}}requestOptions?: IRequestOptions): Observable<{{#returnType}}{{{returnType}}}{{#isResponseTypeFile}}|undefined{{/isResponseTypeFile}}{{/returnType}}{{^returnType}}any{{/returnType}}>
+    {{>documentation}}
     public {{nickname}}<T>({{#allParams.0}}requestParameters: {{#prefixParameterInterfaces}}{{classname}}{{/prefixParameterInterfaces}}{{operationIdCamelCase}}RequestParams, {{/allParams.0}}requestOptions?: IRequestOptionsWithResponseType<T>): Observable<T>
     public {{nickname}}<T>({{#allParams.0}}requestParameters: {{#prefixParameterInterfaces}}{{classname}}{{/prefixParameterInterfaces}}{{operationIdCamelCase}}RequestParams, {{/allParams.0}}requestOptions?: any): Observable<{{#returnType}}{{{returnType}}}{{#isResponseTypeFile}}|undefined{{/isResponseTypeFile}}{{/returnType}}{{^returnType}}any{{/returnType}}> {
         if (!!requestOptions && !!requestOptions.debugging) {
