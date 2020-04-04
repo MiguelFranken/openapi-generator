@@ -22,7 +22,7 @@ import { catchError, map, concatMap } from "rxjs/operators";
 
 import { Order } from '../model/models';
 
-import { BASE_PATH, COLLECTION_FORMATS, HttpImage }          from '../variables';
+import { BASE_PATH, COLLECTION_FORMATS, HttpImage, IRequestOptions, IRequestOptionsWithResponseType }          from '../variables';
 import { Configuration }                                     from '../configuration';
 
 interface LogRequest {
@@ -55,6 +55,10 @@ export interface PlaceOrderRequestParams {
 }
 
 
+/**
+  * Access to Petstore orders
+  
+  */
 @Injectable({
   providedIn: 'root'
 })
@@ -114,7 +118,6 @@ export class StoreService {
     }
 
 
-
     private addToHttpParams(httpParams: HttpParams, value: any, key?: string): HttpParams {
         if (typeof value === "object" && value instanceof Date === false) {
             httpParams = this.addToHttpParamsRecursive(httpParams, value);
@@ -152,38 +155,61 @@ export class StoreService {
     }
 
     /**
-     * Delete purchase order by ID
-     * For valid response try integer IDs with value &lt; 1000. Anything above 1000 or nonintegers will generate API errors
-     * @param requestParameters
-     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
-     * @param reportProgress flag to report request and response progress.
-     */
-    public deleteOrder(requestParameters: DeleteOrderRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<any>;
-    public deleteOrder<T>(requestParameters: DeleteOrderRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}, resType?: new() => T): Observable<T>;
-    public deleteOrder(requestParameters: DeleteOrderRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<HttpResponse<any>>;
-    public deleteOrder(requestParameters: DeleteOrderRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<HttpEvent<any>>;
-    public deleteOrder(requestParameters: DeleteOrderRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: undefined}, resType?: any): Observable<any> {
+  * Delete purchase order by ID
+  * <p></p>
+  * <p></p>
+  * For valid response try integer IDs with value < 1000. Anything above 1000 or nonintegers will generate API errors
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 400 (Invalid ID supplied)<br>- 404 (Order not found)
+  * <p></p>
+  * @param requestParameters {@link DeleteOrderRequestParams}
+  * @param requestOptions Optional request options
+  */
 
-      if (resType !== undefined) {
-          this.logger.debug("Using extended DTO for deserialization");
-      } else {
-          this.logger.debug("There is no custom DTO");
-      }
-        this.logger.debug("Sending request deleteOrder", requestParameters);
+    public deleteOrder(requestParameters: DeleteOrderRequestParams, requestOptions?: IRequestOptions): Observable<any>
+    /**
+  * Delete purchase order by ID
+  * <p></p>
+  * <p></p>
+  * For valid response try integer IDs with value < 1000. Anything above 1000 or nonintegers will generate API errors
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 400 (Invalid ID supplied)<br>- 404 (Order not found)
+  * <p></p>
+  * @param requestParameters {@link DeleteOrderRequestParams}
+  * @param requestOptions Optional request options
+  */
+
+    public deleteOrder<T>(requestParameters: DeleteOrderRequestParams, requestOptions?: IRequestOptionsWithResponseType<T>): Observable<T>
+    public deleteOrder<T>(requestParameters: DeleteOrderRequestParams, requestOptions?: any): Observable<any> {
+        if (!!requestOptions && !!requestOptions.debugging) {
+            if (!!requestOptions.responseType) {
+                this.logger.debug("Using extended DTO for deserialization");
+            } else {
+                this.logger.debug("No handwritten DTO extension was registered");
+            }
+            this.logger.debug("Sending request deleteOrder with parameters", requestParameters);
+        }
+
         const orderId = requestParameters.orderId;
         if (orderId === null || orderId === undefined) {
+            this.logger.error('Required parameter orderId was null or undefined when calling deleteOrder.');
             throw new Error('Required parameter orderId was null or undefined when calling deleteOrder.');
         }
 
         let headers = this.defaultHeaders;
 
-        let httpHeaderAcceptSelected: string | undefined = options && options.httpHeaderAccept;
-        if (httpHeaderAcceptSelected === undefined) {
-            // to determine the Accept header
-            const httpHeaderAccepts: string[] = [
-            ];
-            httpHeaderAcceptSelected = this.configuration.selectHeaderAccept(httpHeaderAccepts);
-        }
+        // to determine the Accept header
+        const httpHeaderAccepts: string[] = [
+        ];
+        let httpHeaderAcceptSelected  = this.configuration.selectHeaderAccept(httpHeaderAccepts);
         if (httpHeaderAcceptSelected !== undefined) {
             headers = headers.set('Accept', httpHeaderAcceptSelected);
         }
@@ -198,13 +224,12 @@ export class StoreService {
         }
 
 
-      const httpOptions = {
-          responseType: <any>responseType,
-          withCredentials: this.configuration.withCredentials,
-          headers: headers,
-          observe: observe,
-          reportProgress: reportProgress
-      };
+        const httpOptions: any = {
+            responseType: <any>responseType,
+            withCredentials: this.configuration.withCredentials,
+            headers: headers,
+            observe: (!!requestOptions && !!requestOptions.observe) ? requestOptions.observe : "body"
+        };
 
         const requestPath = `${this.configuration.basePath}/store/order/${encodeURIComponent(String(orderId))}`;
 
@@ -220,50 +245,63 @@ export class StoreService {
                 }),
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
-        } else {
-            if(resType !== undefined) {
-                const responseObservable = this.httpClient.delete<any>(requestPath ,
-          httpOptions
-            ).pipe(
-                map(response => {
-                    if (resType) {
-                        return plainToClassFromExist(new resType(), response);
-                    } else {
-                        return response;
-                    }
-                }),
+        } else if (!!requestOptions && !!requestOptions.responseType) {
+            const responseObservable = this.httpClient.delete<any>(requestPath ,httpOptions).pipe(
+                map(response => plainToClassFromExist(new requestOptions.responseType(), response)),
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
-                return responseObservable;
-            } else {
-                return this.httpClient.delete<any>(requestPath, 
-                    httpOptions
-                ).pipe(
-                    catchError(this.getErrorCallback(logRequest).bind(this))
-                );
-            }
+            return responseObservable;
+        } else {
+            return this.httpClient.delete<any>(requestPath, 
+                httpOptions
+            ).pipe(
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
         }
-
-    }
+  }
 
     /**
-     * Returns pet inventories by status
-     * Returns a map of status codes to quantities
-     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
-     * @param reportProgress flag to report request and response progress.
-     */
-    public getInventory(observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json'}): Observable<{ [key: string]: number; }>;
-    public getInventory<T>(observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json'}, resType?: new() => T): Observable<T>;
-    public getInventory(observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json'}): Observable<HttpResponse<{ [key: string]: number; }>>;
-    public getInventory(observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/json'}): Observable<HttpEvent<{ [key: string]: number; }>>;
-    public getInventory(observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/json'}, resType?: any): Observable<any> {
+  * Returns pet inventories by status
+  * <p></p>
+  * <p></p>
+  * Returns a map of status codes to quantities
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 200 (successful operation)
+  * <p></p>
+  * @param requestOptions Optional request options
+  */
 
-      if (resType !== undefined) {
-          this.logger.debug("Using extended DTO for deserialization");
-      } else {
-          this.logger.debug("There is no custom DTO");
-      }
-        this.logger.debug("Sending request getInventory");
+    public getInventory(requestOptions?: IRequestOptions): Observable<{ [key: string]: number; }>
+    /**
+  * Returns pet inventories by status
+  * <p></p>
+  * <p></p>
+  * Returns a map of status codes to quantities
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 200 (successful operation)
+  * <p></p>
+  * @param requestOptions Optional request options
+  */
+
+    public getInventory<T>(requestOptions?: IRequestOptionsWithResponseType<T>): Observable<T>
+    public getInventory<T>(requestOptions?: any): Observable<{ [key: string]: number; }> {
+        if (!!requestOptions && !!requestOptions.debugging) {
+            if (!!requestOptions.responseType) {
+                this.logger.debug("Using extended DTO for deserialization");
+            } else {
+                this.logger.debug("No handwritten DTO extension was registered");
+            }
+            this.logger.debug("Sending request getInventory");
+        }
+
 
         let headers = this.defaultHeaders;
 
@@ -274,15 +312,11 @@ export class StoreService {
                 headers = headers.set('api_key', key);
             }
         }
-
-        let httpHeaderAcceptSelected: string | undefined = options && options.httpHeaderAccept;
-        if (httpHeaderAcceptSelected === undefined) {
-            // to determine the Accept header
-            const httpHeaderAccepts: string[] = [
-                'application/json'
-            ];
-            httpHeaderAcceptSelected = this.configuration.selectHeaderAccept(httpHeaderAccepts);
-        }
+        // to determine the Accept header
+        const httpHeaderAccepts: string[] = [
+            'application/json'
+        ];
+        let httpHeaderAcceptSelected  = this.configuration.selectHeaderAccept(httpHeaderAccepts);
         if (httpHeaderAcceptSelected !== undefined) {
             headers = headers.set('Accept', httpHeaderAcceptSelected);
         }
@@ -297,13 +331,12 @@ export class StoreService {
         }
 
 
-      const httpOptions = {
-          responseType: <any>responseType,
-          withCredentials: this.configuration.withCredentials,
-          headers: headers,
-          observe: observe,
-          reportProgress: reportProgress
-      };
+        const httpOptions: any = {
+            responseType: <any>responseType,
+            withCredentials: this.configuration.withCredentials,
+            headers: headers,
+            observe: (!!requestOptions && !!requestOptions.observe) ? requestOptions.observe : "body"
+        };
 
         const requestPath = `${this.configuration.basePath}/store/inventory`;
 
@@ -319,67 +352,99 @@ export class StoreService {
                 }),
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
-        } else {
-            if(resType !== undefined) {
-                const responseObservable = this.httpClient.get<any>(requestPath ,
-          httpOptions
-            ).pipe(
-                map(response => {
-                    if (resType) {
-                        return plainToClassFromExist(new resType(), response);
-                    } else {
-                        return response;
-                    }
-                }),
+        } else if (!!requestOptions && !!requestOptions.responseType) {
+            const responseObservable = this.httpClient.get<any>(requestPath ,httpOptions).pipe(
+                map(response => plainToClassFromExist(new requestOptions.responseType(), response)),
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
-                return responseObservable;
-            } else {
-                return this.httpClient.get<{ [key: string]: number; }>(requestPath, 
-                    httpOptions
-                ).pipe(
-                    catchError(this.getErrorCallback(logRequest).bind(this))
-                );
-            }
+            return responseObservable;
+        } else {
+            return this.httpClient.get<{ [key: string]: number; }>(requestPath, 
+                httpOptions
+            ).pipe(
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
         }
-
-    }
+  }
 
     /**
-     * Find purchase order by ID
-     * For valid response try integer IDs with value &lt;&#x3D; 5 or &gt; 10. Other values will generated exceptions
-     * @param requestParameters
-     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
-     * @param reportProgress flag to report request and response progress.
-     */
-    public getOrderById(requestParameters: GetOrderByIdRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<Order>;
-    public getOrderById<T>(requestParameters: GetOrderByIdRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}, resType?: new() => T): Observable<T>;
-    public getOrderById(requestParameters: GetOrderByIdRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<HttpResponse<Order>>;
-    public getOrderById(requestParameters: GetOrderByIdRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<HttpEvent<Order>>;
-    public getOrderById(requestParameters: GetOrderByIdRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}, resType?: any): Observable<any> {
+  * Find purchase order by ID
+  * <p></p>
+  * <p></p>
+  * For valid response try integer IDs with value <= 5 or > 10. Other values will generated exceptions
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <pre>
+  * {
+  "petId" : 6,
+  "quantity" : 1,
+  "id" : 0,
+  "shipDate" : "2000-01-23T04:56:07.000+00:00",
+  "complete" : false,
+  "status" : "placed"
+}
+  * </pre>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 200 (successful operation) with body {@link Order}<br>- 400 (Invalid ID supplied)<br>- 404 (Order not found)
+  * <p></p>
+  * @param requestParameters {@link GetOrderByIdRequestParams}
+  * @param requestOptions Optional request options
+  */
 
-      if (resType !== undefined) {
-          this.logger.debug("Using extended DTO for deserialization");
-      } else {
-          this.logger.debug("There is no custom DTO");
-      }
-        this.logger.debug("Sending request getOrderById", requestParameters);
+    public getOrderById(requestParameters: GetOrderByIdRequestParams, requestOptions?: IRequestOptions): Observable<Order>
+    /**
+  * Find purchase order by ID
+  * <p></p>
+  * <p></p>
+  * For valid response try integer IDs with value <= 5 or > 10. Other values will generated exceptions
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <pre>
+  * {
+  "petId" : 6,
+  "quantity" : 1,
+  "id" : 0,
+  "shipDate" : "2000-01-23T04:56:07.000+00:00",
+  "complete" : false,
+  "status" : "placed"
+}
+  * </pre>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 200 (successful operation) with body {@link Order}<br>- 400 (Invalid ID supplied)<br>- 404 (Order not found)
+  * <p></p>
+  * @param requestParameters {@link GetOrderByIdRequestParams}
+  * @param requestOptions Optional request options
+  */
+
+    public getOrderById<T>(requestParameters: GetOrderByIdRequestParams, requestOptions?: IRequestOptionsWithResponseType<T>): Observable<T>
+    public getOrderById<T>(requestParameters: GetOrderByIdRequestParams, requestOptions?: any): Observable<Order> {
+        if (!!requestOptions && !!requestOptions.debugging) {
+            if (!!requestOptions.responseType) {
+                this.logger.debug("Using extended DTO for deserialization");
+            } else {
+                this.logger.debug("No handwritten DTO extension was registered");
+            }
+            this.logger.debug("Sending request getOrderById with parameters", requestParameters);
+        }
+
         const orderId = requestParameters.orderId;
         if (orderId === null || orderId === undefined) {
+            this.logger.error('Required parameter orderId was null or undefined when calling getOrderById.');
             throw new Error('Required parameter orderId was null or undefined when calling getOrderById.');
         }
 
         let headers = this.defaultHeaders;
 
-        let httpHeaderAcceptSelected: string | undefined = options && options.httpHeaderAccept;
-        if (httpHeaderAcceptSelected === undefined) {
-            // to determine the Accept header
-            const httpHeaderAccepts: string[] = [
-                'application/xml',
-                'application/json'
-            ];
-            httpHeaderAcceptSelected = this.configuration.selectHeaderAccept(httpHeaderAccepts);
-        }
+        // to determine the Accept header
+        const httpHeaderAccepts: string[] = [
+            'application/xml',
+            'application/json'
+        ];
+        let httpHeaderAcceptSelected  = this.configuration.selectHeaderAccept(httpHeaderAccepts);
         if (httpHeaderAcceptSelected !== undefined) {
             headers = headers.set('Accept', httpHeaderAcceptSelected);
         }
@@ -394,13 +459,12 @@ export class StoreService {
         }
 
 
-      const httpOptions = {
-          responseType: <any>responseType,
-          withCredentials: this.configuration.withCredentials,
-          headers: headers,
-          observe: observe,
-          reportProgress: reportProgress
-      };
+        const httpOptions: any = {
+            responseType: <any>responseType,
+            withCredentials: this.configuration.withCredentials,
+            headers: headers,
+            observe: (!!requestOptions && !!requestOptions.observe) ? requestOptions.observe : "body"
+        };
 
         const requestPath = `${this.configuration.basePath}/store/order/${encodeURIComponent(String(orderId))}`;
 
@@ -416,70 +480,96 @@ export class StoreService {
                 }),
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
-        } else {
-            if(resType !== undefined) {
-                const responseObservable = this.httpClient.get<any>(requestPath ,
-          httpOptions
-            ).pipe(
-                map(response => {
-                    if (resType) {
-                        return plainToClassFromExist(new resType(), response);
-                    } else {
-                        return response;
-                    }
-                }),
+        } else if (!!requestOptions && !!requestOptions.responseType) {
+            const responseObservable = this.httpClient.get<any>(requestPath ,httpOptions).pipe(
+                map(response => plainToClassFromExist(new requestOptions.responseType(), response)),
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
-                return responseObservable;
-            } else {
-                return this.httpClient.get<Order>(requestPath, 
-                    httpOptions
-                ).pipe(
-                    catchError(this.getErrorCallback(logRequest).bind(this))
-                );
-            }
+            return responseObservable;
+        } else {
+            return this.httpClient.get<Order>(requestPath, 
+                httpOptions
+            ).pipe(
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
         }
-
-    }
+  }
 
     /**
-     * Place an order for a pet
-     * @param requestParameters
-     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
-     * @param reportProgress flag to report request and response progress.
-     */
-    public placeOrder(requestParameters: PlaceOrderRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<Order>;
-    public placeOrder<T>(requestParameters: PlaceOrderRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}, resType?: new() => T): Observable<T>;
-    public placeOrder(requestParameters: PlaceOrderRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<HttpResponse<Order>>;
-    public placeOrder(requestParameters: PlaceOrderRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<HttpEvent<Order>>;
-    public placeOrder(requestParameters: PlaceOrderRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}, resType?: any): Observable<any> {
+  * Place an order for a pet
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <pre>
+  * {
+  "petId" : 6,
+  "quantity" : 1,
+  "id" : 0,
+  "shipDate" : "2000-01-23T04:56:07.000+00:00",
+  "complete" : false,
+  "status" : "placed"
+}
+  * </pre>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 200 (successful operation) with body {@link Order}<br>- 400 (Invalid Order)
+  * <p></p>
+  * @param requestParameters {@link PlaceOrderRequestParams}
+  * @param requestOptions Optional request options
+  */
 
-      if (resType !== undefined) {
-          this.logger.debug("Using extended DTO for deserialization");
-      } else {
-          this.logger.debug("There is no custom DTO");
-      }
-        this.logger.debug("Sending request placeOrder", requestParameters);
+    public placeOrder(requestParameters: PlaceOrderRequestParams, requestOptions?: IRequestOptions): Observable<Order>
+    /**
+  * Place an order for a pet
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <pre>
+  * {
+  "petId" : 6,
+  "quantity" : 1,
+  "id" : 0,
+  "shipDate" : "2000-01-23T04:56:07.000+00:00",
+  "complete" : false,
+  "status" : "placed"
+}
+  * </pre>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 200 (successful operation) with body {@link Order}<br>- 400 (Invalid Order)
+  * <p></p>
+  * @param requestParameters {@link PlaceOrderRequestParams}
+  * @param requestOptions Optional request options
+  */
+
+    public placeOrder<T>(requestParameters: PlaceOrderRequestParams, requestOptions?: IRequestOptionsWithResponseType<T>): Observable<T>
+    public placeOrder<T>(requestParameters: PlaceOrderRequestParams, requestOptions?: any): Observable<Order> {
+        if (!!requestOptions && !!requestOptions.debugging) {
+            if (!!requestOptions.responseType) {
+                this.logger.debug("Using extended DTO for deserialization");
+            } else {
+                this.logger.debug("No handwritten DTO extension was registered");
+            }
+            this.logger.debug("Sending request placeOrder with parameters", requestParameters);
+        }
+
         const body = requestParameters.body;
         if (body === null || body === undefined) {
+            this.logger.error('Required parameter body was null or undefined when calling placeOrder.');
             throw new Error('Required parameter body was null or undefined when calling placeOrder.');
         }
 
         let headers = this.defaultHeaders;
 
-        let httpHeaderAcceptSelected: string | undefined = options && options.httpHeaderAccept;
-        if (httpHeaderAcceptSelected === undefined) {
-            // to determine the Accept header
-            const httpHeaderAccepts: string[] = [
-                'application/xml',
-                'application/json'
-            ];
-            httpHeaderAcceptSelected = this.configuration.selectHeaderAccept(httpHeaderAccepts);
-        }
+        // to determine the Accept header
+        const httpHeaderAccepts: string[] = [
+            'application/xml',
+            'application/json'
+        ];
+        let httpHeaderAcceptSelected  = this.configuration.selectHeaderAccept(httpHeaderAccepts);
         if (httpHeaderAcceptSelected !== undefined) {
             headers = headers.set('Accept', httpHeaderAcceptSelected);
         }
-
 
         // to determine the Content-Type header
         const consumes: string[] = [
@@ -498,13 +588,12 @@ export class StoreService {
         }
 
 
-      const httpOptions = {
-          responseType: <any>responseType,
-          withCredentials: this.configuration.withCredentials,
-          headers: headers,
-          observe: observe,
-          reportProgress: reportProgress
-      };
+        const httpOptions: any = {
+            responseType: <any>responseType,
+            withCredentials: this.configuration.withCredentials,
+            headers: headers,
+            observe: (!!requestOptions && !!requestOptions.observe) ? requestOptions.observe : "body"
+        };
 
         const requestPath = `${this.configuration.basePath}/store/order`;
 
@@ -520,32 +609,20 @@ export class StoreService {
                 }),
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
-        } else {
-            if(resType !== undefined) {
-                const responseObservable = this.httpClient.post<any>(requestPath ,
-          body,
-          httpOptions
-            ).pipe(
-                map(response => {
-                    if (resType) {
-                        return plainToClassFromExist(new resType(), response);
-                    } else {
-                        return response;
-                    }
-                }),
+        } else if (!!requestOptions && !!requestOptions.responseType) {
+            const responseObservable = this.httpClient.post<any>(requestPath ,body,httpOptions).pipe(
+                map(response => plainToClassFromExist(new requestOptions.responseType(), response)),
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
-                return responseObservable;
-            } else {
-                return this.httpClient.post<Order>(requestPath, 
-                body,
-                    httpOptions
-                ).pipe(
-                    catchError(this.getErrorCallback(logRequest).bind(this))
-                );
-            }
+            return responseObservable;
+        } else {
+            return this.httpClient.post<Order>(requestPath, 
+            body,
+                httpOptions
+            ).pipe(
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
         }
-
-    }
+  }
 
 }

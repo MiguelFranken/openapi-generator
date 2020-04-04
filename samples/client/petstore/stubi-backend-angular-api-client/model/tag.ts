@@ -9,20 +9,35 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { Type } from "class-transformer";
 
 
 /**
  * A tag for a pet
+ * <p></p>
+ * <p></p>
+ * <b>Example Model:</b><br>
+ * <pre>
+ * {
+  "name" : "name",
+  "id" : 0
+}
+ * </pre>
  */
-import { Type } from "class-transformer";
-
-
 // @dynamic
 export class Tag { 
+    /**
+     
+     * <p>Example: 0</p>
+     */
     
     
     
     id?: number;
+    /**
+     
+     * <p>Example: "name"</p>
+     */
     
     
     

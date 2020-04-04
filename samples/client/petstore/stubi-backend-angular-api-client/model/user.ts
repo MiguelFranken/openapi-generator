@@ -9,46 +9,88 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { Type } from "class-transformer";
 
 
 /**
  * A User who is purchasing from the pet store
+ * <p></p>
+ * <p></p>
+ * <b>Example Model:</b><br>
+ * <pre>
+ * {
+  "firstName" : "firstName",
+  "lastName" : "lastName",
+  "password" : "password",
+  "userStatus" : 6,
+  "phone" : "phone",
+  "id" : 0,
+  "email" : "email",
+  "username" : "username"
+}
+ * </pre>
  */
-import { Type } from "class-transformer";
-
-
 // @dynamic
 export class User { 
+    /**
+     
+     * <p>Example: 0</p>
+     */
     
     
     
     id?: number;
+    /**
+     
+     * <p>Example: "username"</p>
+     */
     
     
     
     username?: string;
+    /**
+     
+     * <p>Example: "firstName"</p>
+     */
     
     
     
     firstName?: string;
+    /**
+     
+     * <p>Example: "lastName"</p>
+     */
     
     
     
     lastName?: string;
+    /**
+     
+     * <p>Example: "email"</p>
+     */
     
     
     
     email?: string;
+    /**
+     
+     * <p>Example: "password"</p>
+     */
     
     
     
     password?: string;
+    /**
+     
+     * <p>Example: "phone"</p>
+     */
     
     
     
     phone?: string;
     /**
      * User Status
+     * <p>Example: 0</p>
      */
     
     

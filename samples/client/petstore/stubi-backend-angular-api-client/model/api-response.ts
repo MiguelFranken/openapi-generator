@@ -9,24 +9,44 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { Type } from "class-transformer";
 
 
 /**
  * Describes the result of uploading an image resource
+ * <p></p>
+ * <p></p>
+ * <b>Example Model:</b><br>
+ * <pre>
+ * {
+  "code" : 0,
+  "type" : "type",
+  "message" : "message"
+}
+ * </pre>
  */
-import { Type } from "class-transformer";
-
-
 // @dynamic
 export class ApiResponse { 
+    /**
+     
+     * <p>Example: 0</p>
+     */
     
     
     
     code?: number;
+    /**
+     
+     * <p>Example: "type"</p>
+     */
     
     
     
     type?: string;
+    /**
+     
+     * <p>Example: "message"</p>
+     */
     
     
     

@@ -19,7 +19,7 @@ import { Type } from "class-transformer";
  * <b>Example Model:</b><br>
  * <pre>
  * {
-  "name" : "Hallo Welt",
+  "name" : "name",
   "id" : 0
 }
  * </pre>
@@ -28,15 +28,15 @@ import { Type } from "class-transformer";
 export class Category { 
     /**
      
-     * <p>Example: null</p>
+     * <p>Example: 0</p>
      */
     
     
     
-    id: number;
+    id?: number;
     /**
-     * Content of the news item
-     * <p>Example: Hallo Welt</p>
+     
+     * <p>Example: "name"</p>
      */
     
     

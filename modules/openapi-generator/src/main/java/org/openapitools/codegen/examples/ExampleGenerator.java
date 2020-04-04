@@ -144,7 +144,6 @@ public class ExampleGenerator {
 
     public List<Map<String, String>> generate(Map<String, Object> examples, List<String> mediaTypes, String modelName) {
         List<Map<String, String>> output = new ArrayList<>();
-        Set<String> processedModels = new HashSet<>();
         if (examples == null) {
             if (mediaTypes == null) {
                 // assume application/json for this
@@ -156,7 +155,7 @@ public class ExampleGenerator {
                 if (modelName != null && (mediaType.startsWith(MIME_TYPE_JSON) || mediaType.contains("*/*"))) {
                     final Schema schema = this.examples.get(modelName);
                     if (schema != null) {
-                        String example = Json.pretty(resolveModelToExample(modelName, mediaType, schema, processedModels));
+                        String example = Json.pretty(resolveModelToExample(modelName, mediaType, schema, new HashSet<>()));
 
                         if (example != null) {
                             kv.put(EXAMPLE, example);
@@ -217,7 +216,7 @@ public class ExampleGenerator {
         return output;
     }
 
-    private Object resolvePropertyToExample(String propertyName, String mediaType, Schema property, Set<String> processedModels) {
+    public Object resolvePropertyToExample(String propertyName, String mediaType, Schema property, Set<String> processedModels) {
         LOGGER.debug("Resolving example for property {}...", property);
         if (property.getExample() != null) {
             LOGGER.debug("Example set in openapi spec, returning example: '{}'", property.getExample().toString());

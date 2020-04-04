@@ -11,44 +11,94 @@
  */
 import { Category } from './category';
 import { Tag } from './tag';
+import { Type } from "class-transformer";
 
+export function TypePetcategory() {
+    return Category;
+}
+export function TypePettags() {
+    return Tag;
+}
 
 /**
  * A pet for sale in the pet store
+ * <p></p>
+ * <p></p>
+ * <b>Example Model:</b><br>
+ * <pre>
+ * {
+  "photoUrls" : [ "photoUrls", "photoUrls" ],
+  "name" : "doggie",
+  "id" : 0,
+  "category" : {
+    "name" : "name",
+    "id" : 0
+  },
+  "tags" : [ {
+    "name" : "name",
+    "id" : 0
+  }, {
+    "name" : "name",
+    "id" : 0
+  } ],
+  "status" : "available"
+}
+ * </pre>
  */
-import { Type } from "class-transformer";
-
-      export function TypePetcategory() {
-        return Category;
-      }
-      export function TypePettags() {
-        return Tag;
-      }
-
 // @dynamic
 export class Pet { 
+    /**
+     
+     * <p>Example: 0</p>
+     */
     
     
     
     id?: number;
+    /**
+     
+     * <p>Example: {
+  "name" : "name",
+  "id" : 0
+}</p>
+     */
     
     
     @Type(TypePetcategory)
     category?: Category;
+    /**
+     
+     * <p>Example: doggie</p>
+     */
     
     
     
     name: string;
+    /**
+     
+     * <p>Example: [ "photoUrls", "photoUrls" ]</p>
+     */
     
     
     
     photoUrls: Array<string>;
+    /**
+     
+     * <p>Example: [ {
+  "name" : "name",
+  "id" : 0
+}, {
+  "name" : "name",
+  "id" : 0
+} ]</p>
+     */
     
     
     @Type(TypePettags)
     tags?: Array<Tag>;
     /**
      * pet status in the store
+     * <p>Example: "available"</p>
      */
     
     

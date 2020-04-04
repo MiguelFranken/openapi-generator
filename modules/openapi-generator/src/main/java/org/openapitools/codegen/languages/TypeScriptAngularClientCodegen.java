@@ -18,6 +18,7 @@
 package org.openapitools.codegen.languages;
 
 import io.swagger.models.Model;
+import io.swagger.v3.core.util.Json;
 import io.swagger.v3.oas.models.media.Schema;
 import org.openapitools.codegen.*;
 import org.openapitools.codegen.examples.ExampleGenerator;
@@ -389,6 +390,21 @@ public class TypeScriptAngularClientCodegen extends AbstractTypeScriptClientCode
     public void postProcessParameter(CodegenParameter parameter) {
         super.postProcessParameter(parameter);
         parameter.dataType = applyLocalTypeMapping(parameter.dataType);
+    }
+
+    @Override
+    public void postProcessModelProperty(CodegenModel model, CodegenProperty property) {
+        super.postProcessModelProperty(model, property);
+
+        if ("null".equals(property.example)) {
+//            property.example = null;
+
+            Map<String, Schema> schemas = ModelUtils.getSchemas(this.openAPI);
+            Schema schema = schemas.get(model.getName());
+            Schema propertySchema = (Schema) schema.getProperties().get(property.getName());
+            String example = Json.pretty(new ExampleGenerator(schemas, this.openAPI).resolvePropertyToExample(property.getName(), "application/json", propertySchema, new HashSet<>()));
+            property.example = example;
+        }
     }
 
     @Override

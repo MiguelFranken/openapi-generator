@@ -20,7 +20,8 @@ import { Observable, throwError, Subject } from 'rxjs';
 import { plainToClassFromExist } from "class-transformer";
 import { catchError, map, concatMap } from "rxjs/operators";
 
-import { Category } from '../model/models';
+import { ApiResponse } from '../model/models';
+import { Pet } from '../model/models';
 
 import { BASE_PATH, COLLECTION_FORMATS, HttpImage, IRequestOptions, IRequestOptionsWithResponseType }          from '../variables';
 import { Configuration }                                     from '../configuration';
@@ -38,6 +39,55 @@ interface BlobOptions {
     responseType: "json"; // "blob" as "json"
 }
 
+
+export interface AddPetRequestParams {
+    /** Pet object that needs to be added to the store */
+    body: Pet;
+}
+
+export interface DeletePetRequestParams {
+    /** Pet id to delete */
+    petId: number;
+    apiKey?: string;
+}
+
+export interface FindPetsByStatusRequestParams {
+    /** Status values that need to be considered for filter */
+    status: Array<'available' | 'pending' | 'sold'>;
+}
+
+export interface FindPetsByTagsRequestParams {
+    /** Tags to filter by */
+    tags: Array<string>;
+}
+
+export interface GetPetByIdRequestParams {
+    /** ID of pet to return */
+    petId: number;
+}
+
+export interface UpdatePetRequestParams {
+    /** Pet object that needs to be added to the store */
+    body: Pet;
+}
+
+export interface UpdatePetWithFormRequestParams {
+    /** ID of pet that needs to be updated */
+    petId: number;
+    /** Updated name of the pet */
+    name?: string;
+    /** Updated status of the pet */
+    status?: string;
+}
+
+export interface UploadFileRequestParams {
+    /** ID of pet to update */
+    petId: number;
+    /** Additional data to pass to server */
+    additionalMetadata?: string;
+    /** file to upload */
+    file?: Blob;
+}
 
 
 /**
@@ -102,6 +152,19 @@ export class PetService {
         this.encoder = this.configuration.encoder || new CustomHttpParameterCodec();
     }
 
+    /**
+     * @param consumes string[] mime-types
+     * @return true: consumes contains 'multipart/form-data', false: otherwise
+     */
+    private canConsumeForm(consumes: string[]): boolean {
+        const form = 'multipart/form-data';
+        for (const consume of consumes) {
+            if (form === consume) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     private addToHttpParams(httpParams: HttpParams, value: any, key?: string): HttpParams {
         if (typeof value === "object" && value instanceof Date === false) {
@@ -144,52 +207,650 @@ export class PetService {
   * <p></p>
   * <p></p>
   * <b>Example Response:</b><br>
-  * <pre>
-  * {
-  "name" : "Hallo Welt",
-  "id" : 0
-}
-  * </pre>
   * <p></p>
   * <p><b>Possible HTTP Response Statuses:</b>
-  * <br>- 202 (Ok) with body {@link Category}<br>- 401 (Registration code is expired)<br>- 405 (Invalid input)
+  * <br>- 405 (Invalid input)
   * <p></p>
+  * @param requestParameters {@link AddPetRequestParams}
   * @param requestOptions Optional request options
   */
 
-    public addPet(requestOptions?: IRequestOptions): Observable<Category>
+    public addPet(requestParameters: AddPetRequestParams, requestOptions?: IRequestOptions): Observable<any>
     /**
   * Add a new pet to the store
   * <p></p>
   * <p></p>
   * <b>Example Response:</b><br>
-  * <pre>
-  * {
-  "name" : "Hallo Welt",
-  "id" : 0
-}
-  * </pre>
   * <p></p>
   * <p><b>Possible HTTP Response Statuses:</b>
-  * <br>- 202 (Ok) with body {@link Category}<br>- 401 (Registration code is expired)<br>- 405 (Invalid input)
+  * <br>- 405 (Invalid input)
   * <p></p>
+  * @param requestParameters {@link AddPetRequestParams}
   * @param requestOptions Optional request options
   */
 
-    public addPet<T>(requestOptions?: IRequestOptionsWithResponseType<T>): Observable<T>
-    public addPet<T>(requestOptions?: any): Observable<Category> {
+    public addPet<T>(requestParameters: AddPetRequestParams, requestOptions?: IRequestOptionsWithResponseType<T>): Observable<T>
+    public addPet<T>(requestParameters: AddPetRequestParams, requestOptions?: any): Observable<any> {
         if (!!requestOptions && !!requestOptions.debugging) {
             if (!!requestOptions.responseType) {
                 this.logger.debug("Using extended DTO for deserialization");
             } else {
                 this.logger.debug("No handwritten DTO extension was registered");
             }
-            this.logger.debug("Sending request addPet");
+            this.logger.debug("Sending request addPet with parameters", requestParameters);
         }
 
+        const body = requestParameters.body;
+        if (body === null || body === undefined) {
+            this.logger.error('Required parameter body was null or undefined when calling addPet.');
+            throw new Error('Required parameter body was null or undefined when calling addPet.');
+        }
 
         let headers = this.defaultHeaders;
 
+        // authentication (petstore_auth) required
+        if (this.configuration.accessToken) {
+            const accessToken = typeof this.configuration.accessToken === 'function'
+                ? this.configuration.accessToken()
+                : this.configuration.accessToken;
+            headers = headers.set('Authorization', 'Bearer ' + accessToken);
+        }
+
+        // to determine the Accept header
+        const httpHeaderAccepts: string[] = [
+        ];
+        let httpHeaderAcceptSelected  = this.configuration.selectHeaderAccept(httpHeaderAccepts);
+        if (httpHeaderAcceptSelected !== undefined) {
+            headers = headers.set('Accept', httpHeaderAcceptSelected);
+        }
+
+        // to determine the Content-Type header
+        const consumes: string[] = [
+            'application/json',
+            'application/xml'
+        ];
+        const httpContentTypeSelected: string | undefined = this.configuration.selectHeaderContentType(consumes);
+        if (httpContentTypeSelected !== undefined) {
+            headers = headers.set('Content-Type', httpContentTypeSelected);
+        }
+
+        let responseType: 'text' | 'json' = 'json';
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.startsWith('text')) {
+            responseType = 'text';
+        }
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            responseType = "blob" as "json";
+        }
+
+
+        const httpOptions: any = {
+            responseType: <any>responseType,
+            withCredentials: this.configuration.withCredentials,
+            headers: headers,
+            observe: (!!requestOptions && !!requestOptions.observe) ? requestOptions.observe : "body"
+        };
+
+        const requestPath = `${this.configuration.basePath}/pet`;
+
+        const logRequest: LogRequest = {
+            url: requestPath,
+            body: body
+        };
+
+        if (httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            return this.httpClient.get<Blob>(requestPath, httpOptions as BlobOptions).pipe(
+                concatMap(result => {
+                    return this.createImageFromBlob(result);
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        } else if (!!requestOptions && !!requestOptions.responseType) {
+            const responseObservable = this.httpClient.post<any>(requestPath ,body,httpOptions).pipe(
+                map(response => plainToClassFromExist(new requestOptions.responseType(), response)),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+            return responseObservable;
+        } else {
+            return this.httpClient.post<any>(requestPath, 
+            body,
+                httpOptions
+            ).pipe(
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        }
+  }
+
+    /**
+  * Deletes a pet
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 400 (Invalid pet value)
+  * <p></p>
+  * @param requestParameters {@link DeletePetRequestParams}
+  * @param requestOptions Optional request options
+  */
+
+    public deletePet(requestParameters: DeletePetRequestParams, requestOptions?: IRequestOptions): Observable<any>
+    /**
+  * Deletes a pet
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 400 (Invalid pet value)
+  * <p></p>
+  * @param requestParameters {@link DeletePetRequestParams}
+  * @param requestOptions Optional request options
+  */
+
+    public deletePet<T>(requestParameters: DeletePetRequestParams, requestOptions?: IRequestOptionsWithResponseType<T>): Observable<T>
+    public deletePet<T>(requestParameters: DeletePetRequestParams, requestOptions?: any): Observable<any> {
+        if (!!requestOptions && !!requestOptions.debugging) {
+            if (!!requestOptions.responseType) {
+                this.logger.debug("Using extended DTO for deserialization");
+            } else {
+                this.logger.debug("No handwritten DTO extension was registered");
+            }
+            this.logger.debug("Sending request deletePet with parameters", requestParameters);
+        }
+
+        const petId = requestParameters.petId;
+        if (petId === null || petId === undefined) {
+            this.logger.error('Required parameter petId was null or undefined when calling deletePet.');
+            throw new Error('Required parameter petId was null or undefined when calling deletePet.');
+        }
+        const apiKey = requestParameters.apiKey;
+
+        let headers = this.defaultHeaders;
+        if (apiKey !== undefined && apiKey !== null) {
+            headers = headers.set('api_key', String(apiKey));
+        }
+
+        // authentication (petstore_auth) required
+        if (this.configuration.accessToken) {
+            const accessToken = typeof this.configuration.accessToken === 'function'
+                ? this.configuration.accessToken()
+                : this.configuration.accessToken;
+            headers = headers.set('Authorization', 'Bearer ' + accessToken);
+        }
+
+        // to determine the Accept header
+        const httpHeaderAccepts: string[] = [
+        ];
+        let httpHeaderAcceptSelected  = this.configuration.selectHeaderAccept(httpHeaderAccepts);
+        if (httpHeaderAcceptSelected !== undefined) {
+            headers = headers.set('Accept', httpHeaderAcceptSelected);
+        }
+
+
+        let responseType: 'text' | 'json' = 'json';
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.startsWith('text')) {
+            responseType = 'text';
+        }
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            responseType = "blob" as "json";
+        }
+
+
+        const httpOptions: any = {
+            responseType: <any>responseType,
+            withCredentials: this.configuration.withCredentials,
+            headers: headers,
+            observe: (!!requestOptions && !!requestOptions.observe) ? requestOptions.observe : "body"
+        };
+
+        const requestPath = `${this.configuration.basePath}/pet/${encodeURIComponent(String(petId))}`;
+
+        const logRequest: LogRequest = {
+            url: requestPath,
+            
+        };
+
+        if (httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            return this.httpClient.get<Blob>(requestPath, httpOptions as BlobOptions).pipe(
+                concatMap(result => {
+                    return this.createImageFromBlob(result);
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        } else if (!!requestOptions && !!requestOptions.responseType) {
+            const responseObservable = this.httpClient.delete<any>(requestPath ,httpOptions).pipe(
+                map(response => plainToClassFromExist(new requestOptions.responseType(), response)),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+            return responseObservable;
+        } else {
+            return this.httpClient.delete<any>(requestPath, 
+                httpOptions
+            ).pipe(
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        }
+  }
+
+    /**
+  * Finds Pets by status
+  * <p></p>
+  * <p></p>
+  * Multiple status values can be provided with comma separated strings
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <pre>
+  * {
+  "photoUrls" : [ "photoUrls", "photoUrls" ],
+  "name" : "doggie",
+  "id" : 0,
+  "category" : {
+    "name" : "name",
+    "id" : 0
+  },
+  "tags" : [ {
+    "name" : "name",
+    "id" : 0
+  }, {
+    "name" : "name",
+    "id" : 0
+  } ],
+  "status" : "available"
+}
+  * </pre>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 200 (successful operation) with body {@link Pet}<br>- 400 (Invalid status value)
+  * <p></p>
+  * @param requestParameters {@link FindPetsByStatusRequestParams}
+  * @param requestOptions Optional request options
+  */
+
+    public findPetsByStatus(requestParameters: FindPetsByStatusRequestParams, requestOptions?: IRequestOptions): Observable<Array<Pet>>
+    /**
+  * Finds Pets by status
+  * <p></p>
+  * <p></p>
+  * Multiple status values can be provided with comma separated strings
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <pre>
+  * {
+  "photoUrls" : [ "photoUrls", "photoUrls" ],
+  "name" : "doggie",
+  "id" : 0,
+  "category" : {
+    "name" : "name",
+    "id" : 0
+  },
+  "tags" : [ {
+    "name" : "name",
+    "id" : 0
+  }, {
+    "name" : "name",
+    "id" : 0
+  } ],
+  "status" : "available"
+}
+  * </pre>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 200 (successful operation) with body {@link Pet}<br>- 400 (Invalid status value)
+  * <p></p>
+  * @param requestParameters {@link FindPetsByStatusRequestParams}
+  * @param requestOptions Optional request options
+  */
+
+    public findPetsByStatus<T>(requestParameters: FindPetsByStatusRequestParams, requestOptions?: IRequestOptionsWithResponseType<T>): Observable<T>
+    public findPetsByStatus<T>(requestParameters: FindPetsByStatusRequestParams, requestOptions?: any): Observable<Array<Pet>> {
+        if (!!requestOptions && !!requestOptions.debugging) {
+            if (!!requestOptions.responseType) {
+                this.logger.debug("Using extended DTO for deserialization");
+            } else {
+                this.logger.debug("No handwritten DTO extension was registered");
+            }
+            this.logger.debug("Sending request findPetsByStatus with parameters", requestParameters);
+        }
+
+        const status = requestParameters.status;
+        if (status === null || status === undefined) {
+            this.logger.error('Required parameter status was null or undefined when calling findPetsByStatus.');
+            throw new Error('Required parameter status was null or undefined when calling findPetsByStatus.');
+        }
+
+        let queryParameters = new HttpParams({encoder: this.encoder});
+        if (status) {
+            queryParameters = this.addToHttpParams(queryParameters,
+                status.join(COLLECTION_FORMATS['csv']), 'status');
+        }
+
+        let headers = this.defaultHeaders;
+
+        // authentication (petstore_auth) required
+        if (this.configuration.accessToken) {
+            const accessToken = typeof this.configuration.accessToken === 'function'
+                ? this.configuration.accessToken()
+                : this.configuration.accessToken;
+            headers = headers.set('Authorization', 'Bearer ' + accessToken);
+        }
+
+        // to determine the Accept header
+        const httpHeaderAccepts: string[] = [
+            'application/xml',
+            'application/json'
+        ];
+        let httpHeaderAcceptSelected  = this.configuration.selectHeaderAccept(httpHeaderAccepts);
+        if (httpHeaderAcceptSelected !== undefined) {
+            headers = headers.set('Accept', httpHeaderAcceptSelected);
+        }
+
+
+        let responseType: 'text' | 'json' = 'json';
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.startsWith('text')) {
+            responseType = 'text';
+        }
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            responseType = "blob" as "json";
+        }
+
+
+        const httpOptions: any = {
+            params: queryParameters,
+            responseType: <any>responseType,
+            withCredentials: this.configuration.withCredentials,
+            headers: headers,
+            observe: (!!requestOptions && !!requestOptions.observe) ? requestOptions.observe : "body"
+        };
+
+        const requestPath = `${this.configuration.basePath}/pet/findByStatus`;
+
+        const logRequest: LogRequest = {
+            url: requestPath,
+            
+        };
+
+        if (httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            return this.httpClient.get<Blob>(requestPath, httpOptions as BlobOptions).pipe(
+                concatMap(result => {
+                    return this.createImageFromBlob(result);
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        } else if (!!requestOptions && !!requestOptions.responseType) {
+            const responseObservable = this.httpClient.get<any>(requestPath ,httpOptions).pipe(
+                map(response => plainToClassFromExist(new requestOptions.responseType(), response)),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+            return responseObservable;
+        } else {
+            return this.httpClient.get<Array<Pet>>(requestPath, 
+                httpOptions
+            ).pipe(
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        }
+  }
+
+    /**
+  * Finds Pets by tags
+  * <p></p>
+  * <p></p>
+  * Multiple tags can be provided with comma separated strings. Use tag1, tag2, tag3 for testing.
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <pre>
+  * {
+  "photoUrls" : [ "photoUrls", "photoUrls" ],
+  "name" : "doggie",
+  "id" : 0,
+  "category" : {
+    "name" : "name",
+    "id" : 0
+  },
+  "tags" : [ {
+    "name" : "name",
+    "id" : 0
+  }, {
+    "name" : "name",
+    "id" : 0
+  } ],
+  "status" : "available"
+}
+  * </pre>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 200 (successful operation) with body {@link Pet}<br>- 400 (Invalid tag value)
+  * <p></p>
+  * @param requestParameters {@link FindPetsByTagsRequestParams}
+  * @param requestOptions Optional request options
+  */
+
+    public findPetsByTags(requestParameters: FindPetsByTagsRequestParams, requestOptions?: IRequestOptions): Observable<Array<Pet>>
+    /**
+  * Finds Pets by tags
+  * <p></p>
+  * <p></p>
+  * Multiple tags can be provided with comma separated strings. Use tag1, tag2, tag3 for testing.
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <pre>
+  * {
+  "photoUrls" : [ "photoUrls", "photoUrls" ],
+  "name" : "doggie",
+  "id" : 0,
+  "category" : {
+    "name" : "name",
+    "id" : 0
+  },
+  "tags" : [ {
+    "name" : "name",
+    "id" : 0
+  }, {
+    "name" : "name",
+    "id" : 0
+  } ],
+  "status" : "available"
+}
+  * </pre>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 200 (successful operation) with body {@link Pet}<br>- 400 (Invalid tag value)
+  * <p></p>
+  * @param requestParameters {@link FindPetsByTagsRequestParams}
+  * @param requestOptions Optional request options
+  */
+
+    public findPetsByTags<T>(requestParameters: FindPetsByTagsRequestParams, requestOptions?: IRequestOptionsWithResponseType<T>): Observable<T>
+    public findPetsByTags<T>(requestParameters: FindPetsByTagsRequestParams, requestOptions?: any): Observable<Array<Pet>> {
+        if (!!requestOptions && !!requestOptions.debugging) {
+            if (!!requestOptions.responseType) {
+                this.logger.debug("Using extended DTO for deserialization");
+            } else {
+                this.logger.debug("No handwritten DTO extension was registered");
+            }
+            this.logger.debug("Sending request findPetsByTags with parameters", requestParameters);
+        }
+
+        const tags = requestParameters.tags;
+        if (tags === null || tags === undefined) {
+            this.logger.error('Required parameter tags was null or undefined when calling findPetsByTags.');
+            throw new Error('Required parameter tags was null or undefined when calling findPetsByTags.');
+        }
+
+        let queryParameters = new HttpParams({encoder: this.encoder});
+        if (tags) {
+            queryParameters = this.addToHttpParams(queryParameters,
+                tags.join(COLLECTION_FORMATS['csv']), 'tags');
+        }
+
+        let headers = this.defaultHeaders;
+
+        // authentication (petstore_auth) required
+        if (this.configuration.accessToken) {
+            const accessToken = typeof this.configuration.accessToken === 'function'
+                ? this.configuration.accessToken()
+                : this.configuration.accessToken;
+            headers = headers.set('Authorization', 'Bearer ' + accessToken);
+        }
+
+        // to determine the Accept header
+        const httpHeaderAccepts: string[] = [
+            'application/xml',
+            'application/json'
+        ];
+        let httpHeaderAcceptSelected  = this.configuration.selectHeaderAccept(httpHeaderAccepts);
+        if (httpHeaderAcceptSelected !== undefined) {
+            headers = headers.set('Accept', httpHeaderAcceptSelected);
+        }
+
+
+        let responseType: 'text' | 'json' = 'json';
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.startsWith('text')) {
+            responseType = 'text';
+        }
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            responseType = "blob" as "json";
+        }
+
+
+        const httpOptions: any = {
+            params: queryParameters,
+            responseType: <any>responseType,
+            withCredentials: this.configuration.withCredentials,
+            headers: headers,
+            observe: (!!requestOptions && !!requestOptions.observe) ? requestOptions.observe : "body"
+        };
+
+        const requestPath = `${this.configuration.basePath}/pet/findByTags`;
+
+        const logRequest: LogRequest = {
+            url: requestPath,
+            
+        };
+
+        if (httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            return this.httpClient.get<Blob>(requestPath, httpOptions as BlobOptions).pipe(
+                concatMap(result => {
+                    return this.createImageFromBlob(result);
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        } else if (!!requestOptions && !!requestOptions.responseType) {
+            const responseObservable = this.httpClient.get<any>(requestPath ,httpOptions).pipe(
+                map(response => plainToClassFromExist(new requestOptions.responseType(), response)),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+            return responseObservable;
+        } else {
+            return this.httpClient.get<Array<Pet>>(requestPath, 
+                httpOptions
+            ).pipe(
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        }
+  }
+
+    /**
+  * Find pet by ID
+  * <p></p>
+  * <p></p>
+  * Returns a single pet
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <pre>
+  * {
+  "photoUrls" : [ "photoUrls", "photoUrls" ],
+  "name" : "doggie",
+  "id" : 0,
+  "category" : {
+    "name" : "name",
+    "id" : 0
+  },
+  "tags" : [ {
+    "name" : "name",
+    "id" : 0
+  }, {
+    "name" : "name",
+    "id" : 0
+  } ],
+  "status" : "available"
+}
+  * </pre>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 200 (successful operation) with body {@link Pet}<br>- 400 (Invalid ID supplied)<br>- 404 (Pet not found)
+  * <p></p>
+  * @param requestParameters {@link GetPetByIdRequestParams}
+  * @param requestOptions Optional request options
+  */
+
+    public getPetById(requestParameters: GetPetByIdRequestParams, requestOptions?: IRequestOptions): Observable<Pet>
+    /**
+  * Find pet by ID
+  * <p></p>
+  * <p></p>
+  * Returns a single pet
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <pre>
+  * {
+  "photoUrls" : [ "photoUrls", "photoUrls" ],
+  "name" : "doggie",
+  "id" : 0,
+  "category" : {
+    "name" : "name",
+    "id" : 0
+  },
+  "tags" : [ {
+    "name" : "name",
+    "id" : 0
+  }, {
+    "name" : "name",
+    "id" : 0
+  } ],
+  "status" : "available"
+}
+  * </pre>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 200 (successful operation) with body {@link Pet}<br>- 400 (Invalid ID supplied)<br>- 404 (Pet not found)
+  * <p></p>
+  * @param requestParameters {@link GetPetByIdRequestParams}
+  * @param requestOptions Optional request options
+  */
+
+    public getPetById<T>(requestParameters: GetPetByIdRequestParams, requestOptions?: IRequestOptionsWithResponseType<T>): Observable<T>
+    public getPetById<T>(requestParameters: GetPetByIdRequestParams, requestOptions?: any): Observable<Pet> {
+        if (!!requestOptions && !!requestOptions.debugging) {
+            if (!!requestOptions.responseType) {
+                this.logger.debug("Using extended DTO for deserialization");
+            } else {
+                this.logger.debug("No handwritten DTO extension was registered");
+            }
+            this.logger.debug("Sending request getPetById with parameters", requestParameters);
+        }
+
+        const petId = requestParameters.petId;
+        if (petId === null || petId === undefined) {
+            this.logger.error('Required parameter petId was null or undefined when calling getPetById.');
+            throw new Error('Required parameter petId was null or undefined when calling getPetById.');
+        }
+
+        let headers = this.defaultHeaders;
+
+        // authentication (api_key) required
+        if (this.configuration.apiKeys) {
+            const key: string | undefined = this.configuration.apiKeys["api_key"] || this.configuration.apiKeys["api_key"];
+            if (key) {
+                headers = headers.set('api_key', key);
+            }
+        }
         // to determine the Accept header
         const httpHeaderAccepts: string[] = [
             'application/xml',
@@ -217,11 +878,11 @@ export class PetService {
             observe: (!!requestOptions && !!requestOptions.observe) ? requestOptions.observe : "body"
         };
 
-        const requestPath = `${this.configuration.basePath}/pet`;
+        const requestPath = `${this.configuration.basePath}/pet/${encodeURIComponent(String(petId))}`;
 
         const logRequest: LogRequest = {
             url: requestPath,
-            body: null
+            
         };
 
         if (httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
@@ -232,14 +893,415 @@ export class PetService {
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
         } else if (!!requestOptions && !!requestOptions.responseType) {
-            const responseObservable = this.httpClient.post<any>(requestPath ,null,httpOptions).pipe(
+            const responseObservable = this.httpClient.get<any>(requestPath ,httpOptions).pipe(
                 map(response => plainToClassFromExist(new requestOptions.responseType(), response)),
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
             return responseObservable;
         } else {
-            return this.httpClient.post<Category>(requestPath, 
-            null,
+            return this.httpClient.get<Pet>(requestPath, 
+                httpOptions
+            ).pipe(
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        }
+  }
+
+    /**
+  * Update an existing pet
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 400 (Invalid ID supplied)<br>- 404 (Pet not found)<br>- 405 (Validation exception)
+  * <p></p>
+  * @param requestParameters {@link UpdatePetRequestParams}
+  * @param requestOptions Optional request options
+  */
+
+    public updatePet(requestParameters: UpdatePetRequestParams, requestOptions?: IRequestOptions): Observable<any>
+    /**
+  * Update an existing pet
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 400 (Invalid ID supplied)<br>- 404 (Pet not found)<br>- 405 (Validation exception)
+  * <p></p>
+  * @param requestParameters {@link UpdatePetRequestParams}
+  * @param requestOptions Optional request options
+  */
+
+    public updatePet<T>(requestParameters: UpdatePetRequestParams, requestOptions?: IRequestOptionsWithResponseType<T>): Observable<T>
+    public updatePet<T>(requestParameters: UpdatePetRequestParams, requestOptions?: any): Observable<any> {
+        if (!!requestOptions && !!requestOptions.debugging) {
+            if (!!requestOptions.responseType) {
+                this.logger.debug("Using extended DTO for deserialization");
+            } else {
+                this.logger.debug("No handwritten DTO extension was registered");
+            }
+            this.logger.debug("Sending request updatePet with parameters", requestParameters);
+        }
+
+        const body = requestParameters.body;
+        if (body === null || body === undefined) {
+            this.logger.error('Required parameter body was null or undefined when calling updatePet.');
+            throw new Error('Required parameter body was null or undefined when calling updatePet.');
+        }
+
+        let headers = this.defaultHeaders;
+
+        // authentication (petstore_auth) required
+        if (this.configuration.accessToken) {
+            const accessToken = typeof this.configuration.accessToken === 'function'
+                ? this.configuration.accessToken()
+                : this.configuration.accessToken;
+            headers = headers.set('Authorization', 'Bearer ' + accessToken);
+        }
+
+        // to determine the Accept header
+        const httpHeaderAccepts: string[] = [
+        ];
+        let httpHeaderAcceptSelected  = this.configuration.selectHeaderAccept(httpHeaderAccepts);
+        if (httpHeaderAcceptSelected !== undefined) {
+            headers = headers.set('Accept', httpHeaderAcceptSelected);
+        }
+
+        // to determine the Content-Type header
+        const consumes: string[] = [
+            'application/json',
+            'application/xml'
+        ];
+        const httpContentTypeSelected: string | undefined = this.configuration.selectHeaderContentType(consumes);
+        if (httpContentTypeSelected !== undefined) {
+            headers = headers.set('Content-Type', httpContentTypeSelected);
+        }
+
+        let responseType: 'text' | 'json' = 'json';
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.startsWith('text')) {
+            responseType = 'text';
+        }
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            responseType = "blob" as "json";
+        }
+
+
+        const httpOptions: any = {
+            responseType: <any>responseType,
+            withCredentials: this.configuration.withCredentials,
+            headers: headers,
+            observe: (!!requestOptions && !!requestOptions.observe) ? requestOptions.observe : "body"
+        };
+
+        const requestPath = `${this.configuration.basePath}/pet`;
+
+        const logRequest: LogRequest = {
+            url: requestPath,
+            body: body
+        };
+
+        if (httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            return this.httpClient.get<Blob>(requestPath, httpOptions as BlobOptions).pipe(
+                concatMap(result => {
+                    return this.createImageFromBlob(result);
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        } else if (!!requestOptions && !!requestOptions.responseType) {
+            const responseObservable = this.httpClient.put<any>(requestPath ,body,httpOptions).pipe(
+                map(response => plainToClassFromExist(new requestOptions.responseType(), response)),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+            return responseObservable;
+        } else {
+            return this.httpClient.put<any>(requestPath, 
+            body,
+                httpOptions
+            ).pipe(
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        }
+  }
+
+    /**
+  * Updates a pet in the store with form data
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 405 (Invalid input)
+  * <p></p>
+  * @param requestParameters {@link UpdatePetWithFormRequestParams}
+  * @param requestOptions Optional request options
+  */
+
+    public updatePetWithForm(requestParameters: UpdatePetWithFormRequestParams, requestOptions?: IRequestOptions): Observable<any>
+    /**
+  * Updates a pet in the store with form data
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 405 (Invalid input)
+  * <p></p>
+  * @param requestParameters {@link UpdatePetWithFormRequestParams}
+  * @param requestOptions Optional request options
+  */
+
+    public updatePetWithForm<T>(requestParameters: UpdatePetWithFormRequestParams, requestOptions?: IRequestOptionsWithResponseType<T>): Observable<T>
+    public updatePetWithForm<T>(requestParameters: UpdatePetWithFormRequestParams, requestOptions?: any): Observable<any> {
+        if (!!requestOptions && !!requestOptions.debugging) {
+            if (!!requestOptions.responseType) {
+                this.logger.debug("Using extended DTO for deserialization");
+            } else {
+                this.logger.debug("No handwritten DTO extension was registered");
+            }
+            this.logger.debug("Sending request updatePetWithForm with parameters", requestParameters);
+        }
+
+        const petId = requestParameters.petId;
+        if (petId === null || petId === undefined) {
+            this.logger.error('Required parameter petId was null or undefined when calling updatePetWithForm.');
+            throw new Error('Required parameter petId was null or undefined when calling updatePetWithForm.');
+        }
+        const name = requestParameters.name;
+        const status = requestParameters.status;
+
+        let headers = this.defaultHeaders;
+
+        // authentication (petstore_auth) required
+        if (this.configuration.accessToken) {
+            const accessToken = typeof this.configuration.accessToken === 'function'
+                ? this.configuration.accessToken()
+                : this.configuration.accessToken;
+            headers = headers.set('Authorization', 'Bearer ' + accessToken);
+        }
+
+        // to determine the Accept header
+        const httpHeaderAccepts: string[] = [
+        ];
+        let httpHeaderAcceptSelected  = this.configuration.selectHeaderAccept(httpHeaderAccepts);
+        if (httpHeaderAcceptSelected !== undefined) {
+            headers = headers.set('Accept', httpHeaderAcceptSelected);
+        }
+
+        // to determine the Content-Type header
+        const consumes: string[] = [
+            'application/x-www-form-urlencoded'
+        ];
+
+        const canConsumeForm = this.canConsumeForm(consumes);
+
+        let formParams: { append(param: string, value: any): any; };
+        let useForm = false;
+        let convertFormParamsToString = false;
+        if (useForm) {
+            formParams = new FormData();
+        } else {
+            formParams = new HttpParams({encoder: this.encoder});
+        }
+
+        if (name !== undefined) {
+            formParams = formParams.append('name', <any>name) as any || formParams;
+        }
+        if (status !== undefined) {
+            formParams = formParams.append('status', <any>status) as any || formParams;
+        }
+
+        let responseType: 'text' | 'json' = 'json';
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.startsWith('text')) {
+            responseType = 'text';
+        }
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            responseType = "blob" as "json";
+        }
+
+
+        const httpOptions: any = {
+            responseType: <any>responseType,
+            withCredentials: this.configuration.withCredentials,
+            headers: headers,
+            observe: (!!requestOptions && !!requestOptions.observe) ? requestOptions.observe : "body"
+        };
+
+        const requestPath = `${this.configuration.basePath}/pet/${encodeURIComponent(String(petId))}`;
+
+        const logRequest: LogRequest = {
+            url: requestPath,
+            body: convertFormParamsToString ? formParams.toString() : formParams
+        };
+
+        if (httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            return this.httpClient.get<Blob>(requestPath, httpOptions as BlobOptions).pipe(
+                concatMap(result => {
+                    return this.createImageFromBlob(result);
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        } else if (!!requestOptions && !!requestOptions.responseType) {
+            const responseObservable = this.httpClient.post<any>(requestPath ,convertFormParamsToString ? formParams.toString() : formParams,httpOptions).pipe(
+                map(response => plainToClassFromExist(new requestOptions.responseType(), response)),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+            return responseObservable;
+        } else {
+            return this.httpClient.post<any>(requestPath, 
+            convertFormParamsToString ? formParams.toString() : formParams,
+                httpOptions
+            ).pipe(
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        }
+  }
+
+    /**
+  * uploads an image
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <pre>
+  * {
+  "code" : 0,
+  "type" : "type",
+  "message" : "message"
+}
+  * </pre>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 200 (successful operation) with body {@link ApiResponse}
+  * <p></p>
+  * @param requestParameters {@link UploadFileRequestParams}
+  * @param requestOptions Optional request options
+  */
+
+    public uploadFile(requestParameters: UploadFileRequestParams, requestOptions?: IRequestOptions): Observable<ApiResponse>
+    /**
+  * uploads an image
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <pre>
+  * {
+  "code" : 0,
+  "type" : "type",
+  "message" : "message"
+}
+  * </pre>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 200 (successful operation) with body {@link ApiResponse}
+  * <p></p>
+  * @param requestParameters {@link UploadFileRequestParams}
+  * @param requestOptions Optional request options
+  */
+
+    public uploadFile<T>(requestParameters: UploadFileRequestParams, requestOptions?: IRequestOptionsWithResponseType<T>): Observable<T>
+    public uploadFile<T>(requestParameters: UploadFileRequestParams, requestOptions?: any): Observable<ApiResponse> {
+        if (!!requestOptions && !!requestOptions.debugging) {
+            if (!!requestOptions.responseType) {
+                this.logger.debug("Using extended DTO for deserialization");
+            } else {
+                this.logger.debug("No handwritten DTO extension was registered");
+            }
+            this.logger.debug("Sending request uploadFile with parameters", requestParameters);
+        }
+
+        const petId = requestParameters.petId;
+        if (petId === null || petId === undefined) {
+            this.logger.error('Required parameter petId was null or undefined when calling uploadFile.');
+            throw new Error('Required parameter petId was null or undefined when calling uploadFile.');
+        }
+        const additionalMetadata = requestParameters.additionalMetadata;
+        const file = requestParameters.file;
+
+        let headers = this.defaultHeaders;
+
+        // authentication (petstore_auth) required
+        if (this.configuration.accessToken) {
+            const accessToken = typeof this.configuration.accessToken === 'function'
+                ? this.configuration.accessToken()
+                : this.configuration.accessToken;
+            headers = headers.set('Authorization', 'Bearer ' + accessToken);
+        }
+
+        // to determine the Accept header
+        const httpHeaderAccepts: string[] = [
+            'application/json'
+        ];
+        let httpHeaderAcceptSelected  = this.configuration.selectHeaderAccept(httpHeaderAccepts);
+        if (httpHeaderAcceptSelected !== undefined) {
+            headers = headers.set('Accept', httpHeaderAcceptSelected);
+        }
+
+        // to determine the Content-Type header
+        const consumes: string[] = [
+            'multipart/form-data'
+        ];
+
+        const canConsumeForm = this.canConsumeForm(consumes);
+
+        let formParams: { append(param: string, value: any): any; };
+        let useForm = false;
+        let convertFormParamsToString = false;
+        // use FormData to transmit files using content-type "multipart/form-data"
+        // see https://stackoverflow.com/questions/4007969/application-x-www-form-urlencoded-or-multipart-form-data
+        useForm = canConsumeForm;
+        if (useForm) {
+            formParams = new FormData();
+        } else {
+            formParams = new HttpParams({encoder: this.encoder});
+        }
+
+        if (additionalMetadata !== undefined) {
+            formParams = formParams.append('additionalMetadata', <any>additionalMetadata) as any || formParams;
+        }
+        if (file !== undefined) {
+            formParams = formParams.append('file', <any>file) as any || formParams;
+        }
+
+        let responseType: 'text' | 'json' = 'json';
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.startsWith('text')) {
+            responseType = 'text';
+        }
+        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            responseType = "blob" as "json";
+        }
+
+
+        const httpOptions: any = {
+            responseType: <any>responseType,
+            withCredentials: this.configuration.withCredentials,
+            headers: headers,
+            observe: (!!requestOptions && !!requestOptions.observe) ? requestOptions.observe : "body"
+        };
+
+        const requestPath = `${this.configuration.basePath}/pet/${encodeURIComponent(String(petId))}/uploadImage`;
+
+        const logRequest: LogRequest = {
+            url: requestPath,
+            body: convertFormParamsToString ? formParams.toString() : formParams
+        };
+
+        if (httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+            return this.httpClient.get<Blob>(requestPath, httpOptions as BlobOptions).pipe(
+                concatMap(result => {
+                    return this.createImageFromBlob(result);
+                }),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+        } else if (!!requestOptions && !!requestOptions.responseType) {
+            const responseObservable = this.httpClient.post<any>(requestPath ,convertFormParamsToString ? formParams.toString() : formParams,httpOptions).pipe(
+                map(response => plainToClassFromExist(new requestOptions.responseType(), response)),
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
+            return responseObservable;
+        } else {
+            return this.httpClient.post<ApiResponse>(requestPath, 
+            convertFormParamsToString ? formParams.toString() : formParams,
                 httpOptions
             ).pipe(
                 catchError(this.getErrorCallback(logRequest).bind(this))

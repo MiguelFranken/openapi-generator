@@ -9,42 +9,74 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { Type } from "class-transformer";
 
+export function TypeOrdershipDate() {
+    return Date;
+}
 
 /**
  * An order for a pets from the pet store
+ * <p></p>
+ * <p></p>
+ * <b>Example Model:</b><br>
+ * <pre>
+ * {
+  "petId" : 6,
+  "quantity" : 1,
+  "id" : 0,
+  "shipDate" : "2000-01-23T04:56:07.000+00:00",
+  "complete" : false,
+  "status" : "placed"
+}
+ * </pre>
  */
-import { Type } from "class-transformer";
-
-    export function TypeOrdershipDate() {
-      return Date;
-    }
-
 // @dynamic
 export class Order { 
+    /**
+     
+     * <p>Example: 0</p>
+     */
     
     
     
     id?: number;
+    /**
+     
+     * <p>Example: 0</p>
+     */
     
     
     
     petId?: number;
+    /**
+     
+     * <p>Example: 0</p>
+     */
     
     
     
     quantity?: number;
+    /**
+     
+     * <p>Example: "2000-01-23T04:56:07.000+00:00"</p>
+     */
     
     @Type(TypeOrdershipDate)
     
     shipDate?: Date;
     /**
      * Order Status
+     * <p>Example: "placed"</p>
      */
     
     
     
     status?: Order.StatusEnum;
+    /**
+     
+     * <p>Example: false</p>
+     */
     
     
     

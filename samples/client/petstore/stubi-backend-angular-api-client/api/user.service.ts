@@ -22,7 +22,7 @@ import { catchError, map, concatMap } from "rxjs/operators";
 
 import { User } from '../model/models';
 
-import { BASE_PATH, COLLECTION_FORMATS, HttpImage }          from '../variables';
+import { BASE_PATH, COLLECTION_FORMATS, HttpImage, IRequestOptions, IRequestOptionsWithResponseType }          from '../variables';
 import { Configuration }                                     from '../configuration';
 
 interface LogRequest {
@@ -78,12 +78,11 @@ export interface UpdateUserRequestParams {
     body: User;
 }
 
+
 /**
- * Some description of the tag
- * <p><b>Responses:</b><ul>
- *   <li>Test
- *   <li>Test2
- */
+  * Operations about user
+  
+  */
 @Injectable({
   providedIn: 'root'
 })
@@ -143,7 +142,6 @@ export class UserService {
     }
 
 
-
     private addToHttpParams(httpParams: HttpParams, value: any, key?: string): HttpParams {
         if (typeof value === "object" && value instanceof Date === false) {
             httpParams = this.addToHttpParamsRecursive(httpParams, value);
@@ -181,42 +179,64 @@ export class UserService {
     }
 
     /**
-     * Create user
-     * This can only be done by the logged in user.
-     * @param requestParameters
-     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
-     * @param reportProgress flag to report request and response progress.
-     */
-    public createUser(requestParameters: CreateUserRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<any>;
-    public createUser<T>(requestParameters: CreateUserRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}, resType?: new() => T): Observable<T>;
-    public createUser(requestParameters: CreateUserRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<HttpResponse<any>>;
-    public createUser(requestParameters: CreateUserRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<HttpEvent<any>>;
-    public createUser(requestParameters: CreateUserRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: undefined}, resType?: any): Observable<any> {
+  * Create user
+  * <p></p>
+  * <p></p>
+  * This can only be done by the logged in user.
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 0 (successful operation)
+  * <p></p>
+  * @param requestParameters {@link CreateUserRequestParams}
+  * @param requestOptions Optional request options
+  */
 
-      if (resType !== undefined) {
-          this.logger.debug("Using extended DTO for deserialization");
-      } else {
-          this.logger.debug("There is no custom DTO");
-      }
-        this.logger.debug("Sending request createUser", requestParameters);
+    public createUser(requestParameters: CreateUserRequestParams, requestOptions?: IRequestOptions): Observable<any>
+    /**
+  * Create user
+  * <p></p>
+  * <p></p>
+  * This can only be done by the logged in user.
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 0 (successful operation)
+  * <p></p>
+  * @param requestParameters {@link CreateUserRequestParams}
+  * @param requestOptions Optional request options
+  */
+
+    public createUser<T>(requestParameters: CreateUserRequestParams, requestOptions?: IRequestOptionsWithResponseType<T>): Observable<T>
+    public createUser<T>(requestParameters: CreateUserRequestParams, requestOptions?: any): Observable<any> {
+        if (!!requestOptions && !!requestOptions.debugging) {
+            if (!!requestOptions.responseType) {
+                this.logger.debug("Using extended DTO for deserialization");
+            } else {
+                this.logger.debug("No handwritten DTO extension was registered");
+            }
+            this.logger.debug("Sending request createUser with parameters", requestParameters);
+        }
+
         const body = requestParameters.body;
         if (body === null || body === undefined) {
+            this.logger.error('Required parameter body was null or undefined when calling createUser.');
             throw new Error('Required parameter body was null or undefined when calling createUser.');
         }
 
         let headers = this.defaultHeaders;
 
-        let httpHeaderAcceptSelected: string | undefined = options && options.httpHeaderAccept;
-        if (httpHeaderAcceptSelected === undefined) {
-            // to determine the Accept header
-            const httpHeaderAccepts: string[] = [
-            ];
-            httpHeaderAcceptSelected = this.configuration.selectHeaderAccept(httpHeaderAccepts);
-        }
+        // to determine the Accept header
+        const httpHeaderAccepts: string[] = [
+        ];
+        let httpHeaderAcceptSelected  = this.configuration.selectHeaderAccept(httpHeaderAccepts);
         if (httpHeaderAcceptSelected !== undefined) {
             headers = headers.set('Accept', httpHeaderAcceptSelected);
         }
-
 
         // to determine the Content-Type header
         const consumes: string[] = [
@@ -235,13 +255,12 @@ export class UserService {
         }
 
 
-      const httpOptions = {
-          responseType: <any>responseType,
-          withCredentials: this.configuration.withCredentials,
-          headers: headers,
-          observe: observe,
-          reportProgress: reportProgress
-      };
+        const httpOptions: any = {
+            responseType: <any>responseType,
+            withCredentials: this.configuration.withCredentials,
+            headers: headers,
+            observe: (!!requestOptions && !!requestOptions.observe) ? requestOptions.observe : "body"
+        };
 
         const requestPath = `${this.configuration.basePath}/user`;
 
@@ -257,70 +276,75 @@ export class UserService {
                 }),
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
-        } else {
-            if(resType !== undefined) {
-                const responseObservable = this.httpClient.post<any>(requestPath ,
-          body,
-          httpOptions
-            ).pipe(
-                map(response => {
-                    if (resType) {
-                        return plainToClassFromExist(new resType(), response);
-                    } else {
-                        return response;
-                    }
-                }),
+        } else if (!!requestOptions && !!requestOptions.responseType) {
+            const responseObservable = this.httpClient.post<any>(requestPath ,body,httpOptions).pipe(
+                map(response => plainToClassFromExist(new requestOptions.responseType(), response)),
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
-                return responseObservable;
-            } else {
-                return this.httpClient.post<any>(requestPath, 
-                body,
-                    httpOptions
-                ).pipe(
-                    catchError(this.getErrorCallback(logRequest).bind(this))
-                );
-            }
+            return responseObservable;
+        } else {
+            return this.httpClient.post<any>(requestPath, 
+            body,
+                httpOptions
+            ).pipe(
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
         }
-
-    }
+  }
 
     /**
-     * Creates list of users with given input array
-     * @param requestParameters
-     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
-     * @param reportProgress flag to report request and response progress.
-     */
-    public createUsersWithArrayInput(requestParameters: CreateUsersWithArrayInputRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<any>;
-    public createUsersWithArrayInput<T>(requestParameters: CreateUsersWithArrayInputRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}, resType?: new() => T): Observable<T>;
-    public createUsersWithArrayInput(requestParameters: CreateUsersWithArrayInputRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<HttpResponse<any>>;
-    public createUsersWithArrayInput(requestParameters: CreateUsersWithArrayInputRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<HttpEvent<any>>;
-    public createUsersWithArrayInput(requestParameters: CreateUsersWithArrayInputRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: undefined}, resType?: any): Observable<any> {
+  * Creates list of users with given input array
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 0 (successful operation)
+  * <p></p>
+  * @param requestParameters {@link CreateUsersWithArrayInputRequestParams}
+  * @param requestOptions Optional request options
+  */
 
-      if (resType !== undefined) {
-          this.logger.debug("Using extended DTO for deserialization");
-      } else {
-          this.logger.debug("There is no custom DTO");
-      }
-        this.logger.debug("Sending request createUsersWithArrayInput", requestParameters);
+    public createUsersWithArrayInput(requestParameters: CreateUsersWithArrayInputRequestParams, requestOptions?: IRequestOptions): Observable<any>
+    /**
+  * Creates list of users with given input array
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 0 (successful operation)
+  * <p></p>
+  * @param requestParameters {@link CreateUsersWithArrayInputRequestParams}
+  * @param requestOptions Optional request options
+  */
+
+    public createUsersWithArrayInput<T>(requestParameters: CreateUsersWithArrayInputRequestParams, requestOptions?: IRequestOptionsWithResponseType<T>): Observable<T>
+    public createUsersWithArrayInput<T>(requestParameters: CreateUsersWithArrayInputRequestParams, requestOptions?: any): Observable<any> {
+        if (!!requestOptions && !!requestOptions.debugging) {
+            if (!!requestOptions.responseType) {
+                this.logger.debug("Using extended DTO for deserialization");
+            } else {
+                this.logger.debug("No handwritten DTO extension was registered");
+            }
+            this.logger.debug("Sending request createUsersWithArrayInput with parameters", requestParameters);
+        }
+
         const body = requestParameters.body;
         if (body === null || body === undefined) {
+            this.logger.error('Required parameter body was null or undefined when calling createUsersWithArrayInput.');
             throw new Error('Required parameter body was null or undefined when calling createUsersWithArrayInput.');
         }
 
         let headers = this.defaultHeaders;
 
-        let httpHeaderAcceptSelected: string | undefined = options && options.httpHeaderAccept;
-        if (httpHeaderAcceptSelected === undefined) {
-            // to determine the Accept header
-            const httpHeaderAccepts: string[] = [
-            ];
-            httpHeaderAcceptSelected = this.configuration.selectHeaderAccept(httpHeaderAccepts);
-        }
+        // to determine the Accept header
+        const httpHeaderAccepts: string[] = [
+        ];
+        let httpHeaderAcceptSelected  = this.configuration.selectHeaderAccept(httpHeaderAccepts);
         if (httpHeaderAcceptSelected !== undefined) {
             headers = headers.set('Accept', httpHeaderAcceptSelected);
         }
-
 
         // to determine the Content-Type header
         const consumes: string[] = [
@@ -339,13 +363,12 @@ export class UserService {
         }
 
 
-      const httpOptions = {
-          responseType: <any>responseType,
-          withCredentials: this.configuration.withCredentials,
-          headers: headers,
-          observe: observe,
-          reportProgress: reportProgress
-      };
+        const httpOptions: any = {
+            responseType: <any>responseType,
+            withCredentials: this.configuration.withCredentials,
+            headers: headers,
+            observe: (!!requestOptions && !!requestOptions.observe) ? requestOptions.observe : "body"
+        };
 
         const requestPath = `${this.configuration.basePath}/user/createWithArray`;
 
@@ -361,70 +384,75 @@ export class UserService {
                 }),
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
-        } else {
-            if(resType !== undefined) {
-                const responseObservable = this.httpClient.post<any>(requestPath ,
-          body,
-          httpOptions
-            ).pipe(
-                map(response => {
-                    if (resType) {
-                        return plainToClassFromExist(new resType(), response);
-                    } else {
-                        return response;
-                    }
-                }),
+        } else if (!!requestOptions && !!requestOptions.responseType) {
+            const responseObservable = this.httpClient.post<any>(requestPath ,body,httpOptions).pipe(
+                map(response => plainToClassFromExist(new requestOptions.responseType(), response)),
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
-                return responseObservable;
-            } else {
-                return this.httpClient.post<any>(requestPath, 
-                body,
-                    httpOptions
-                ).pipe(
-                    catchError(this.getErrorCallback(logRequest).bind(this))
-                );
-            }
+            return responseObservable;
+        } else {
+            return this.httpClient.post<any>(requestPath, 
+            body,
+                httpOptions
+            ).pipe(
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
         }
-
-    }
+  }
 
     /**
-     * Creates list of users with given input array
-     * @param requestParameters
-     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
-     * @param reportProgress flag to report request and response progress.
-     */
-    public createUsersWithListInput(requestParameters: CreateUsersWithListInputRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<any>;
-    public createUsersWithListInput<T>(requestParameters: CreateUsersWithListInputRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}, resType?: new() => T): Observable<T>;
-    public createUsersWithListInput(requestParameters: CreateUsersWithListInputRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<HttpResponse<any>>;
-    public createUsersWithListInput(requestParameters: CreateUsersWithListInputRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<HttpEvent<any>>;
-    public createUsersWithListInput(requestParameters: CreateUsersWithListInputRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: undefined}, resType?: any): Observable<any> {
+  * Creates list of users with given input array
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 0 (successful operation)
+  * <p></p>
+  * @param requestParameters {@link CreateUsersWithListInputRequestParams}
+  * @param requestOptions Optional request options
+  */
 
-      if (resType !== undefined) {
-          this.logger.debug("Using extended DTO for deserialization");
-      } else {
-          this.logger.debug("There is no custom DTO");
-      }
-        this.logger.debug("Sending request createUsersWithListInput", requestParameters);
+    public createUsersWithListInput(requestParameters: CreateUsersWithListInputRequestParams, requestOptions?: IRequestOptions): Observable<any>
+    /**
+  * Creates list of users with given input array
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 0 (successful operation)
+  * <p></p>
+  * @param requestParameters {@link CreateUsersWithListInputRequestParams}
+  * @param requestOptions Optional request options
+  */
+
+    public createUsersWithListInput<T>(requestParameters: CreateUsersWithListInputRequestParams, requestOptions?: IRequestOptionsWithResponseType<T>): Observable<T>
+    public createUsersWithListInput<T>(requestParameters: CreateUsersWithListInputRequestParams, requestOptions?: any): Observable<any> {
+        if (!!requestOptions && !!requestOptions.debugging) {
+            if (!!requestOptions.responseType) {
+                this.logger.debug("Using extended DTO for deserialization");
+            } else {
+                this.logger.debug("No handwritten DTO extension was registered");
+            }
+            this.logger.debug("Sending request createUsersWithListInput with parameters", requestParameters);
+        }
+
         const body = requestParameters.body;
         if (body === null || body === undefined) {
+            this.logger.error('Required parameter body was null or undefined when calling createUsersWithListInput.');
             throw new Error('Required parameter body was null or undefined when calling createUsersWithListInput.');
         }
 
         let headers = this.defaultHeaders;
 
-        let httpHeaderAcceptSelected: string | undefined = options && options.httpHeaderAccept;
-        if (httpHeaderAcceptSelected === undefined) {
-            // to determine the Accept header
-            const httpHeaderAccepts: string[] = [
-            ];
-            httpHeaderAcceptSelected = this.configuration.selectHeaderAccept(httpHeaderAccepts);
-        }
+        // to determine the Accept header
+        const httpHeaderAccepts: string[] = [
+        ];
+        let httpHeaderAcceptSelected  = this.configuration.selectHeaderAccept(httpHeaderAccepts);
         if (httpHeaderAcceptSelected !== undefined) {
             headers = headers.set('Accept', httpHeaderAcceptSelected);
         }
-
 
         // to determine the Content-Type header
         const consumes: string[] = [
@@ -443,13 +471,12 @@ export class UserService {
         }
 
 
-      const httpOptions = {
-          responseType: <any>responseType,
-          withCredentials: this.configuration.withCredentials,
-          headers: headers,
-          observe: observe,
-          reportProgress: reportProgress
-      };
+        const httpOptions: any = {
+            responseType: <any>responseType,
+            withCredentials: this.configuration.withCredentials,
+            headers: headers,
+            observe: (!!requestOptions && !!requestOptions.observe) ? requestOptions.observe : "body"
+        };
 
         const requestPath = `${this.configuration.basePath}/user/createWithList`;
 
@@ -465,67 +492,78 @@ export class UserService {
                 }),
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
-        } else {
-            if(resType !== undefined) {
-                const responseObservable = this.httpClient.post<any>(requestPath ,
-          body,
-          httpOptions
-            ).pipe(
-                map(response => {
-                    if (resType) {
-                        return plainToClassFromExist(new resType(), response);
-                    } else {
-                        return response;
-                    }
-                }),
+        } else if (!!requestOptions && !!requestOptions.responseType) {
+            const responseObservable = this.httpClient.post<any>(requestPath ,body,httpOptions).pipe(
+                map(response => plainToClassFromExist(new requestOptions.responseType(), response)),
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
-                return responseObservable;
-            } else {
-                return this.httpClient.post<any>(requestPath, 
-                body,
-                    httpOptions
-                ).pipe(
-                    catchError(this.getErrorCallback(logRequest).bind(this))
-                );
-            }
+            return responseObservable;
+        } else {
+            return this.httpClient.post<any>(requestPath, 
+            body,
+                httpOptions
+            ).pipe(
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
         }
-
-    }
+  }
 
     /**
-     * Delete user
-     * This can only be done by the logged in user.
-     * @param requestParameters
-     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
-     * @param reportProgress flag to report request and response progress.
-     */
-    public deleteUser(requestParameters: DeleteUserRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<any>;
-    public deleteUser<T>(requestParameters: DeleteUserRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}, resType?: new() => T): Observable<T>;
-    public deleteUser(requestParameters: DeleteUserRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<HttpResponse<any>>;
-    public deleteUser(requestParameters: DeleteUserRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<HttpEvent<any>>;
-    public deleteUser(requestParameters: DeleteUserRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: undefined}, resType?: any): Observable<any> {
+  * Delete user
+  * <p></p>
+  * <p></p>
+  * This can only be done by the logged in user.
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 400 (Invalid username supplied)<br>- 404 (User not found)
+  * <p></p>
+  * @param requestParameters {@link DeleteUserRequestParams}
+  * @param requestOptions Optional request options
+  */
 
-      if (resType !== undefined) {
-          this.logger.debug("Using extended DTO for deserialization");
-      } else {
-          this.logger.debug("There is no custom DTO");
-      }
-        this.logger.debug("Sending request deleteUser", requestParameters);
+    public deleteUser(requestParameters: DeleteUserRequestParams, requestOptions?: IRequestOptions): Observable<any>
+    /**
+  * Delete user
+  * <p></p>
+  * <p></p>
+  * This can only be done by the logged in user.
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 400 (Invalid username supplied)<br>- 404 (User not found)
+  * <p></p>
+  * @param requestParameters {@link DeleteUserRequestParams}
+  * @param requestOptions Optional request options
+  */
+
+    public deleteUser<T>(requestParameters: DeleteUserRequestParams, requestOptions?: IRequestOptionsWithResponseType<T>): Observable<T>
+    public deleteUser<T>(requestParameters: DeleteUserRequestParams, requestOptions?: any): Observable<any> {
+        if (!!requestOptions && !!requestOptions.debugging) {
+            if (!!requestOptions.responseType) {
+                this.logger.debug("Using extended DTO for deserialization");
+            } else {
+                this.logger.debug("No handwritten DTO extension was registered");
+            }
+            this.logger.debug("Sending request deleteUser with parameters", requestParameters);
+        }
+
         const username = requestParameters.username;
         if (username === null || username === undefined) {
+            this.logger.error('Required parameter username was null or undefined when calling deleteUser.');
             throw new Error('Required parameter username was null or undefined when calling deleteUser.');
         }
 
         let headers = this.defaultHeaders;
 
-        let httpHeaderAcceptSelected: string | undefined = options && options.httpHeaderAccept;
-        if (httpHeaderAcceptSelected === undefined) {
-            // to determine the Accept header
-            const httpHeaderAccepts: string[] = [
-            ];
-            httpHeaderAcceptSelected = this.configuration.selectHeaderAccept(httpHeaderAccepts);
-        }
+        // to determine the Accept header
+        const httpHeaderAccepts: string[] = [
+        ];
+        let httpHeaderAcceptSelected  = this.configuration.selectHeaderAccept(httpHeaderAccepts);
         if (httpHeaderAcceptSelected !== undefined) {
             headers = headers.set('Accept', httpHeaderAcceptSelected);
         }
@@ -540,13 +578,12 @@ export class UserService {
         }
 
 
-      const httpOptions = {
-          responseType: <any>responseType,
-          withCredentials: this.configuration.withCredentials,
-          headers: headers,
-          observe: observe,
-          reportProgress: reportProgress
-      };
+        const httpOptions: any = {
+            responseType: <any>responseType,
+            withCredentials: this.configuration.withCredentials,
+            headers: headers,
+            observe: (!!requestOptions && !!requestOptions.observe) ? requestOptions.observe : "body"
+        };
 
         const requestPath = `${this.configuration.basePath}/user/${encodeURIComponent(String(username))}`;
 
@@ -562,66 +599,97 @@ export class UserService {
                 }),
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
-        } else {
-            if(resType !== undefined) {
-                const responseObservable = this.httpClient.delete<any>(requestPath ,
-          httpOptions
-            ).pipe(
-                map(response => {
-                    if (resType) {
-                        return plainToClassFromExist(new resType(), response);
-                    } else {
-                        return response;
-                    }
-                }),
+        } else if (!!requestOptions && !!requestOptions.responseType) {
+            const responseObservable = this.httpClient.delete<any>(requestPath ,httpOptions).pipe(
+                map(response => plainToClassFromExist(new requestOptions.responseType(), response)),
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
-                return responseObservable;
-            } else {
-                return this.httpClient.delete<any>(requestPath, 
-                    httpOptions
-                ).pipe(
-                    catchError(this.getErrorCallback(logRequest).bind(this))
-                );
-            }
+            return responseObservable;
+        } else {
+            return this.httpClient.delete<any>(requestPath, 
+                httpOptions
+            ).pipe(
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
         }
-
-    }
+  }
 
     /**
-     * Get user by user name
-     * @param requestParameters
-     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
-     * @param reportProgress flag to report request and response progress.
-     */
-    public getUserByName(requestParameters: GetUserByNameRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<User>;
-    public getUserByName<T>(requestParameters: GetUserByNameRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}, resType?: new() => T): Observable<T>;
-    public getUserByName(requestParameters: GetUserByNameRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<HttpResponse<User>>;
-    public getUserByName(requestParameters: GetUserByNameRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<HttpEvent<User>>;
-    public getUserByName(requestParameters: GetUserByNameRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}, resType?: any): Observable<any> {
+  * Get user by user name
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <pre>
+  * {
+  "firstName" : "firstName",
+  "lastName" : "lastName",
+  "password" : "password",
+  "userStatus" : 6,
+  "phone" : "phone",
+  "id" : 0,
+  "email" : "email",
+  "username" : "username"
+}
+  * </pre>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 200 (successful operation) with body {@link User}<br>- 400 (Invalid username supplied)<br>- 404 (User not found)
+  * <p></p>
+  * @param requestParameters {@link GetUserByNameRequestParams}
+  * @param requestOptions Optional request options
+  */
 
-      if (resType !== undefined) {
-          this.logger.debug("Using extended DTO for deserialization");
-      } else {
-          this.logger.debug("There is no custom DTO");
-      }
-        this.logger.debug("Sending request getUserByName", requestParameters);
+    public getUserByName(requestParameters: GetUserByNameRequestParams, requestOptions?: IRequestOptions): Observable<User>
+    /**
+  * Get user by user name
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <pre>
+  * {
+  "firstName" : "firstName",
+  "lastName" : "lastName",
+  "password" : "password",
+  "userStatus" : 6,
+  "phone" : "phone",
+  "id" : 0,
+  "email" : "email",
+  "username" : "username"
+}
+  * </pre>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 200 (successful operation) with body {@link User}<br>- 400 (Invalid username supplied)<br>- 404 (User not found)
+  * <p></p>
+  * @param requestParameters {@link GetUserByNameRequestParams}
+  * @param requestOptions Optional request options
+  */
+
+    public getUserByName<T>(requestParameters: GetUserByNameRequestParams, requestOptions?: IRequestOptionsWithResponseType<T>): Observable<T>
+    public getUserByName<T>(requestParameters: GetUserByNameRequestParams, requestOptions?: any): Observable<User> {
+        if (!!requestOptions && !!requestOptions.debugging) {
+            if (!!requestOptions.responseType) {
+                this.logger.debug("Using extended DTO for deserialization");
+            } else {
+                this.logger.debug("No handwritten DTO extension was registered");
+            }
+            this.logger.debug("Sending request getUserByName with parameters", requestParameters);
+        }
+
         const username = requestParameters.username;
         if (username === null || username === undefined) {
+            this.logger.error('Required parameter username was null or undefined when calling getUserByName.');
             throw new Error('Required parameter username was null or undefined when calling getUserByName.');
         }
 
         let headers = this.defaultHeaders;
 
-        let httpHeaderAcceptSelected: string | undefined = options && options.httpHeaderAccept;
-        if (httpHeaderAcceptSelected === undefined) {
-            // to determine the Accept header
-            const httpHeaderAccepts: string[] = [
-                'application/xml',
-                'application/json'
-            ];
-            httpHeaderAcceptSelected = this.configuration.selectHeaderAccept(httpHeaderAccepts);
-        }
+        // to determine the Accept header
+        const httpHeaderAccepts: string[] = [
+            'application/xml',
+            'application/json'
+        ];
+        let httpHeaderAcceptSelected  = this.configuration.selectHeaderAccept(httpHeaderAccepts);
         if (httpHeaderAcceptSelected !== undefined) {
             headers = headers.set('Accept', httpHeaderAcceptSelected);
         }
@@ -636,13 +704,12 @@ export class UserService {
         }
 
 
-      const httpOptions = {
-          responseType: <any>responseType,
-          withCredentials: this.configuration.withCredentials,
-          headers: headers,
-          observe: observe,
-          reportProgress: reportProgress
-      };
+        const httpOptions: any = {
+            responseType: <any>responseType,
+            withCredentials: this.configuration.withCredentials,
+            headers: headers,
+            observe: (!!requestOptions && !!requestOptions.observe) ? requestOptions.observe : "body"
+        };
 
         const requestPath = `${this.configuration.basePath}/user/${encodeURIComponent(String(username))}`;
 
@@ -658,56 +725,67 @@ export class UserService {
                 }),
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
-        } else {
-            if(resType !== undefined) {
-                const responseObservable = this.httpClient.get<any>(requestPath ,
-          httpOptions
-            ).pipe(
-                map(response => {
-                    if (resType) {
-                        return plainToClassFromExist(new resType(), response);
-                    } else {
-                        return response;
-                    }
-                }),
+        } else if (!!requestOptions && !!requestOptions.responseType) {
+            const responseObservable = this.httpClient.get<any>(requestPath ,httpOptions).pipe(
+                map(response => plainToClassFromExist(new requestOptions.responseType(), response)),
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
-                return responseObservable;
-            } else {
-                return this.httpClient.get<User>(requestPath, 
-                    httpOptions
-                ).pipe(
-                    catchError(this.getErrorCallback(logRequest).bind(this))
-                );
-            }
+            return responseObservable;
+        } else {
+            return this.httpClient.get<User>(requestPath, 
+                httpOptions
+            ).pipe(
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
         }
-
-    }
+  }
 
     /**
-     * Logs user into the system
-     * @param requestParameters
-     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
-     * @param reportProgress flag to report request and response progress.
-     */
-    public loginUser(requestParameters: LoginUserRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<string>;
-    public loginUser<T>(requestParameters: LoginUserRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}, resType?: new() => T): Observable<T>;
-    public loginUser(requestParameters: LoginUserRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<HttpResponse<string>>;
-    public loginUser(requestParameters: LoginUserRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}): Observable<HttpEvent<string>>;
-    public loginUser(requestParameters: LoginUserRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: 'application/xml' | 'application/json'}, resType?: any): Observable<any> {
+  * Logs user into the system
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 200 (successful operation)<br>- 400 (Invalid username/password supplied)
+  * <p></p>
+  * @param requestParameters {@link LoginUserRequestParams}
+  * @param requestOptions Optional request options
+  */
 
-      if (resType !== undefined) {
-          this.logger.debug("Using extended DTO for deserialization");
-      } else {
-          this.logger.debug("There is no custom DTO");
-      }
-        this.logger.debug("Sending request loginUser", requestParameters);
+    public loginUser(requestParameters: LoginUserRequestParams, requestOptions?: IRequestOptions): Observable<string>
+    /**
+  * Logs user into the system
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 200 (successful operation)<br>- 400 (Invalid username/password supplied)
+  * <p></p>
+  * @param requestParameters {@link LoginUserRequestParams}
+  * @param requestOptions Optional request options
+  */
+
+    public loginUser<T>(requestParameters: LoginUserRequestParams, requestOptions?: IRequestOptionsWithResponseType<T>): Observable<T>
+    public loginUser<T>(requestParameters: LoginUserRequestParams, requestOptions?: any): Observable<string> {
+        if (!!requestOptions && !!requestOptions.debugging) {
+            if (!!requestOptions.responseType) {
+                this.logger.debug("Using extended DTO for deserialization");
+            } else {
+                this.logger.debug("No handwritten DTO extension was registered");
+            }
+            this.logger.debug("Sending request loginUser with parameters", requestParameters);
+        }
+
         const username = requestParameters.username;
         if (username === null || username === undefined) {
+            this.logger.error('Required parameter username was null or undefined when calling loginUser.');
             throw new Error('Required parameter username was null or undefined when calling loginUser.');
         }
         const password = requestParameters.password;
         if (password === null || password === undefined) {
+            this.logger.error('Required parameter password was null or undefined when calling loginUser.');
             throw new Error('Required parameter password was null or undefined when calling loginUser.');
         }
 
@@ -723,15 +801,12 @@ export class UserService {
 
         let headers = this.defaultHeaders;
 
-        let httpHeaderAcceptSelected: string | undefined = options && options.httpHeaderAccept;
-        if (httpHeaderAcceptSelected === undefined) {
-            // to determine the Accept header
-            const httpHeaderAccepts: string[] = [
-                'application/xml',
-                'application/json'
-            ];
-            httpHeaderAcceptSelected = this.configuration.selectHeaderAccept(httpHeaderAccepts);
-        }
+        // to determine the Accept header
+        const httpHeaderAccepts: string[] = [
+            'application/xml',
+            'application/json'
+        ];
+        let httpHeaderAcceptSelected  = this.configuration.selectHeaderAccept(httpHeaderAccepts);
         if (httpHeaderAcceptSelected !== undefined) {
             headers = headers.set('Accept', httpHeaderAcceptSelected);
         }
@@ -746,14 +821,13 @@ export class UserService {
         }
 
 
-      const httpOptions = {
-          params: queryParameters,
-          responseType: <any>responseType,
-          withCredentials: this.configuration.withCredentials,
-          headers: headers,
-          observe: observe,
-          reportProgress: reportProgress
-      };
+        const httpOptions: any = {
+            params: queryParameters,
+            responseType: <any>responseType,
+            withCredentials: this.configuration.withCredentials,
+            headers: headers,
+            observe: (!!requestOptions && !!requestOptions.observe) ? requestOptions.observe : "body"
+        };
 
         const requestPath = `${this.configuration.basePath}/user/login`;
 
@@ -769,59 +843,64 @@ export class UserService {
                 }),
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
-        } else {
-            if(resType !== undefined) {
-                const responseObservable = this.httpClient.get<any>(requestPath ,
-          httpOptions
-            ).pipe(
-                map(response => {
-                    if (resType) {
-                        return plainToClassFromExist(new resType(), response);
-                    } else {
-                        return response;
-                    }
-                }),
+        } else if (!!requestOptions && !!requestOptions.responseType) {
+            const responseObservable = this.httpClient.get<any>(requestPath ,httpOptions).pipe(
+                map(response => plainToClassFromExist(new requestOptions.responseType(), response)),
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
-                return responseObservable;
-            } else {
-                return this.httpClient.get<string>(requestPath, 
-                    httpOptions
-                ).pipe(
-                    catchError(this.getErrorCallback(logRequest).bind(this))
-                );
-            }
+            return responseObservable;
+        } else {
+            return this.httpClient.get<string>(requestPath, 
+                httpOptions
+            ).pipe(
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
         }
-
-    }
+  }
 
     /**
-     * Logs out current logged in user session
-     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
-     * @param reportProgress flag to report request and response progress.
-     */
-    public logoutUser(observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<any>;
-    public logoutUser<T>(observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}, resType?: new() => T): Observable<T>;
-    public logoutUser(observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<HttpResponse<any>>;
-    public logoutUser(observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<HttpEvent<any>>;
-    public logoutUser(observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: undefined}, resType?: any): Observable<any> {
+  * Logs out current logged in user session
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 0 (successful operation)
+  * <p></p>
+  * @param requestOptions Optional request options
+  */
 
-      if (resType !== undefined) {
-          this.logger.debug("Using extended DTO for deserialization");
-      } else {
-          this.logger.debug("There is no custom DTO");
-      }
-        this.logger.debug("Sending request logoutUser");
+    public logoutUser(requestOptions?: IRequestOptions): Observable<any>
+    /**
+  * Logs out current logged in user session
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 0 (successful operation)
+  * <p></p>
+  * @param requestOptions Optional request options
+  */
+
+    public logoutUser<T>(requestOptions?: IRequestOptionsWithResponseType<T>): Observable<T>
+    public logoutUser<T>(requestOptions?: any): Observable<any> {
+        if (!!requestOptions && !!requestOptions.debugging) {
+            if (!!requestOptions.responseType) {
+                this.logger.debug("Using extended DTO for deserialization");
+            } else {
+                this.logger.debug("No handwritten DTO extension was registered");
+            }
+            this.logger.debug("Sending request logoutUser");
+        }
+
 
         let headers = this.defaultHeaders;
 
-        let httpHeaderAcceptSelected: string | undefined = options && options.httpHeaderAccept;
-        if (httpHeaderAcceptSelected === undefined) {
-            // to determine the Accept header
-            const httpHeaderAccepts: string[] = [
-            ];
-            httpHeaderAcceptSelected = this.configuration.selectHeaderAccept(httpHeaderAccepts);
-        }
+        // to determine the Accept header
+        const httpHeaderAccepts: string[] = [
+        ];
+        let httpHeaderAcceptSelected  = this.configuration.selectHeaderAccept(httpHeaderAccepts);
         if (httpHeaderAcceptSelected !== undefined) {
             headers = headers.set('Accept', httpHeaderAcceptSelected);
         }
@@ -836,13 +915,12 @@ export class UserService {
         }
 
 
-      const httpOptions = {
-          responseType: <any>responseType,
-          withCredentials: this.configuration.withCredentials,
-          headers: headers,
-          observe: observe,
-          reportProgress: reportProgress
-      };
+        const httpOptions: any = {
+            responseType: <any>responseType,
+            withCredentials: this.configuration.withCredentials,
+            headers: headers,
+            observe: (!!requestOptions && !!requestOptions.observe) ? requestOptions.observe : "body"
+        };
 
         const requestPath = `${this.configuration.basePath}/user/logout`;
 
@@ -858,73 +936,85 @@ export class UserService {
                 }),
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
-        } else {
-            if(resType !== undefined) {
-                const responseObservable = this.httpClient.get<any>(requestPath ,
-          httpOptions
-            ).pipe(
-                map(response => {
-                    if (resType) {
-                        return plainToClassFromExist(new resType(), response);
-                    } else {
-                        return response;
-                    }
-                }),
+        } else if (!!requestOptions && !!requestOptions.responseType) {
+            const responseObservable = this.httpClient.get<any>(requestPath ,httpOptions).pipe(
+                map(response => plainToClassFromExist(new requestOptions.responseType(), response)),
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
-                return responseObservable;
-            } else {
-                return this.httpClient.get<any>(requestPath, 
-                    httpOptions
-                ).pipe(
-                    catchError(this.getErrorCallback(logRequest).bind(this))
-                );
-            }
+            return responseObservable;
+        } else {
+            return this.httpClient.get<any>(requestPath, 
+                httpOptions
+            ).pipe(
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
         }
-
-    }
+  }
 
     /**
-     * Updated user
-     * This can only be done by the logged in user.
-     * @param requestParameters
-     * @param observe set whether or not to return the data Observable as the body, response or events. defaults to returning the body.
-     * @param reportProgress flag to report request and response progress.
-     */
-    public updateUser(requestParameters: UpdateUserRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<any>;
-    public updateUser<T>(requestParameters: UpdateUserRequestParams, observe?: 'body', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}, resType?: new() => T): Observable<T>;
-    public updateUser(requestParameters: UpdateUserRequestParams, observe?: 'response', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<HttpResponse<any>>;
-    public updateUser(requestParameters: UpdateUserRequestParams, observe?: 'events', reportProgress?: boolean, options?: {httpHeaderAccept?: undefined}): Observable<HttpEvent<any>>;
-    public updateUser(requestParameters: UpdateUserRequestParams, observe: any = 'body', reportProgress: boolean = false, options?: {httpHeaderAccept?: undefined}, resType?: any): Observable<any> {
+  * Updated user
+  * <p></p>
+  * <p></p>
+  * This can only be done by the logged in user.
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 400 (Invalid user supplied)<br>- 404 (User not found)
+  * <p></p>
+  * @param requestParameters {@link UpdateUserRequestParams}
+  * @param requestOptions Optional request options
+  */
 
-      if (resType !== undefined) {
-          this.logger.debug("Using extended DTO for deserialization");
-      } else {
-          this.logger.debug("There is no custom DTO");
-      }
-        this.logger.debug("Sending request updateUser", requestParameters);
+    public updateUser(requestParameters: UpdateUserRequestParams, requestOptions?: IRequestOptions): Observable<any>
+    /**
+  * Updated user
+  * <p></p>
+  * <p></p>
+  * This can only be done by the logged in user.
+  * <p></p>
+  * <p></p>
+  * <b>Example Response:</b><br>
+  * <p></p>
+  * <p><b>Possible HTTP Response Statuses:</b>
+  * <br>- 400 (Invalid user supplied)<br>- 404 (User not found)
+  * <p></p>
+  * @param requestParameters {@link UpdateUserRequestParams}
+  * @param requestOptions Optional request options
+  */
+
+    public updateUser<T>(requestParameters: UpdateUserRequestParams, requestOptions?: IRequestOptionsWithResponseType<T>): Observable<T>
+    public updateUser<T>(requestParameters: UpdateUserRequestParams, requestOptions?: any): Observable<any> {
+        if (!!requestOptions && !!requestOptions.debugging) {
+            if (!!requestOptions.responseType) {
+                this.logger.debug("Using extended DTO for deserialization");
+            } else {
+                this.logger.debug("No handwritten DTO extension was registered");
+            }
+            this.logger.debug("Sending request updateUser with parameters", requestParameters);
+        }
+
         const username = requestParameters.username;
         if (username === null || username === undefined) {
+            this.logger.error('Required parameter username was null or undefined when calling updateUser.');
             throw new Error('Required parameter username was null or undefined when calling updateUser.');
         }
         const body = requestParameters.body;
         if (body === null || body === undefined) {
+            this.logger.error('Required parameter body was null or undefined when calling updateUser.');
             throw new Error('Required parameter body was null or undefined when calling updateUser.');
         }
 
         let headers = this.defaultHeaders;
 
-        let httpHeaderAcceptSelected: string | undefined = options && options.httpHeaderAccept;
-        if (httpHeaderAcceptSelected === undefined) {
-            // to determine the Accept header
-            const httpHeaderAccepts: string[] = [
-            ];
-            httpHeaderAcceptSelected = this.configuration.selectHeaderAccept(httpHeaderAccepts);
-        }
+        // to determine the Accept header
+        const httpHeaderAccepts: string[] = [
+        ];
+        let httpHeaderAcceptSelected  = this.configuration.selectHeaderAccept(httpHeaderAccepts);
         if (httpHeaderAcceptSelected !== undefined) {
             headers = headers.set('Accept', httpHeaderAcceptSelected);
         }
-
 
         // to determine the Content-Type header
         const consumes: string[] = [
@@ -943,13 +1033,12 @@ export class UserService {
         }
 
 
-      const httpOptions = {
-          responseType: <any>responseType,
-          withCredentials: this.configuration.withCredentials,
-          headers: headers,
-          observe: observe,
-          reportProgress: reportProgress
-      };
+        const httpOptions: any = {
+            responseType: <any>responseType,
+            withCredentials: this.configuration.withCredentials,
+            headers: headers,
+            observe: (!!requestOptions && !!requestOptions.observe) ? requestOptions.observe : "body"
+        };
 
         const requestPath = `${this.configuration.basePath}/user/${encodeURIComponent(String(username))}`;
 
@@ -965,32 +1054,20 @@ export class UserService {
                 }),
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
-        } else {
-            if(resType !== undefined) {
-                const responseObservable = this.httpClient.put<any>(requestPath ,
-          body,
-          httpOptions
-            ).pipe(
-                map(response => {
-                    if (resType) {
-                        return plainToClassFromExist(new resType(), response);
-                    } else {
-                        return response;
-                    }
-                }),
+        } else if (!!requestOptions && !!requestOptions.responseType) {
+            const responseObservable = this.httpClient.put<any>(requestPath ,body,httpOptions).pipe(
+                map(response => plainToClassFromExist(new requestOptions.responseType(), response)),
                 catchError(this.getErrorCallback(logRequest).bind(this))
             );
-                return responseObservable;
-            } else {
-                return this.httpClient.put<any>(requestPath, 
-                body,
-                    httpOptions
-                ).pipe(
-                    catchError(this.getErrorCallback(logRequest).bind(this))
-                );
-            }
+            return responseObservable;
+        } else {
+            return this.httpClient.put<any>(requestPath, 
+            body,
+                httpOptions
+            ).pipe(
+                catchError(this.getErrorCallback(logRequest).bind(this))
+            );
         }
-
-    }
+  }
 
 }
