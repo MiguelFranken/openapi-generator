@@ -39,20 +39,17 @@ interface BlobOptions {
 
 
 
-/**
-  * Everything about your Pets
-  */
 @Injectable({
   providedIn: 'root'
 })
-export class PetService {
+export class DefaultService {
 
     protected basePath = 'http://petstore.swagger.io/v2';
     public defaultHeaders = new HttpHeaders();
     public configuration = new Configuration();
     public encoder: HttpParameterCodec;
 
-    private logger: Logger = new Logger({ name: "PetService", flags: ["service"] });
+    private logger: Logger = new Logger({ name: "DefaultService", flags: ["service"] });
 
     /**
      * Executed when an HTTP error occurred
