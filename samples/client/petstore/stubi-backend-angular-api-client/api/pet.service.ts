@@ -154,7 +154,7 @@ export class PetService {
   * <p><b>Possible HTTP Response Statuses:</b>
   * <br>- 202 (Ok) with body {@link Category}<br>- 401 (Registration code is expired)<br>- 405 (Invalid input)
   * <p></p>
-  * @param requestOptions TODO
+  * @param requestOptions Optional request options
   */
 
     public addPet(requestOptions?: IRequestOptions): Observable<Category>
@@ -173,7 +173,7 @@ export class PetService {
   * <p><b>Possible HTTP Response Statuses:</b>
   * <br>- 202 (Ok) with body {@link Category}<br>- 401 (Registration code is expired)<br>- 405 (Invalid input)
   * <p></p>
-  * @param requestOptions TODO
+  * @param requestOptions Optional request options
   */
 
     public addPet<T>(requestOptions?: IRequestOptionsWithResponseType<T>): Observable<T>

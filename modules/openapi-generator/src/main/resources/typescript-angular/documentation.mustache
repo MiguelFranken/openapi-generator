@@ -20,7 +20,7 @@
   * {{#responses}}<br>- {{{code}}} ({{{message}}}){{^primitiveType}} with body {@link {{baseType}}}{{/primitiveType}}{{/responses}}
   * <p></p>
 {{#allParams.0}}
-  * @param requestParameters TODO
+  * @param requestParameters {@link {{#prefixParameterInterfaces}}{{classname}}{{/prefixParameterInterfaces}}{{operationIdCamelCase}}RequestParams}
 {{/allParams.0}}
-  * @param requestOptions TODO
+  * @param requestOptions Optional request options
   */
