@@ -31,6 +31,8 @@ paths:
           description: Ok
           schema:
             $ref: "#/definitions/Category"
+        '401':
+          "description": "Registration code is expired"
         '405':
           description: Invalid input
 definitions:

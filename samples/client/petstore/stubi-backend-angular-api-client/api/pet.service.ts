@@ -152,7 +152,7 @@ export class PetService {
   * </pre>
   * <p></p>
   * <p><b>Possible HTTP Response Statuses:</b>
-  * <br>- 202 (Ok) with body {@link Category}<br>- 405 (Invalid input)
+  * <br>- 202 (Ok) with body {@link Category}<br>- 401 (Registration code is expired)<br>- 405 (Invalid input)
   * <p></p>
   * @param requestOptions TODO
   */
@@ -171,7 +171,7 @@ export class PetService {
   * </pre>
   * <p></p>
   * <p><b>Possible HTTP Response Statuses:</b>
-  * <br>- 202 (Ok) with body {@link Category}<br>- 405 (Invalid input)
+  * <br>- 202 (Ok) with body {@link Category}<br>- 401 (Registration code is expired)<br>- 405 (Invalid input)
   * <p></p>
   * @param requestOptions TODO
   */

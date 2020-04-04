@@ -17,7 +17,7 @@
   * </pre>{{/examples.0}}
   * <p></p>
   * <p><b>Possible HTTP Response Statuses:</b>
-  * {{#responses}}<br>- {{{code}}} ({{{message}}}){{#hasMore}} with body {@link {{baseType}}}{{/hasMore}}{{/responses}}
+  * {{#responses}}<br>- {{{code}}} ({{{message}}}){{^primitiveType}} with body {@link {{baseType}}}{{/primitiveType}}{{/responses}}
   * <p></p>
 {{#allParams.0}}
   * @param requestParameters TODO
