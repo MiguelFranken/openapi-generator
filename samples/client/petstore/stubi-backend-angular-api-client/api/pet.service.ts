@@ -145,11 +145,11 @@ export class PetService {
      * <p></p>
      * <b>Example Response:</b><br>
      * <pre>
-     *     {
+     * {
   "name" : "Hallo Welt",
   "id" : 0
 }
-     </pre>
+     * </pre>
      * <p></p>
      * <p><b>Possible HTTP Response Statuses:</b>
      * <br>202 (Ok) with body {@link Category}<br>405 (Invalid input)

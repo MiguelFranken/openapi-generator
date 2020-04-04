@@ -206,7 +206,10 @@ export class {{classname}} {
 {{/notes}}
      * <p></p>
      * <p></p>
-     * <b>Example Response:</b><br>{{#examples.0}}<tt>{{{example}}}</tt>{{/examples.0}}
+     * <b>Example Response:</b><br>{{#examples.0}}
+     * <pre>
+     * {{{example}}}
+     * </pre>{{/examples.0}}
      * <p></p>
      * <p><b>Possible HTTP Response Statuses:</b>
      * {{#responses}}<br>{{{code}}} ({{{message}}}){{#hasMore}} with body {@link {{baseType}}}{{/hasMore}}{{/responses}}
