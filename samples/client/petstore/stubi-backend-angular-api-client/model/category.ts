@@ -9,20 +9,26 @@
  * https://openapi-generator.tech
  * Do not edit the class manually.
  */
+import { Type } from "class-transformer";
 
 
 /**
  * A category for a pet
  */
-import { Type } from "class-transformer";
-
-
 // @dynamic
 export class Category { 
+    /**
+     
+     * <p>Example: null</p>
+     */
     
     
     
-    id?: number;
+    id: number;
+    /**
+     * Content of the news item
+     * <p>Example: Hallo Welt</p>
+     */
     
     
     

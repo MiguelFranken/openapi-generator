@@ -27,10 +27,11 @@
     "@angular/common": "^{{ngVersion}}",
     "@angular/compiler": "^{{ngVersion}}",
     "core-js": "^2.4.0",
-    "reflect-metadata": "^0.1.3",
+    "reflect-metadata": "^0.1.13",
     "rxjs": "^{{rxjsVersion}}"
   },
   "dependencies": {
+    "@types/reflect-metadata": "^0.1.0",
     "@upe/logger": "^2.0.3",
     "class-transformer": "^0.2.3"
   },
@@ -42,7 +43,7 @@
     "@angular/http": "^{{ngVersion}}",{{/useHttpClient}}
     "@angular/platform-browser": "^{{ngVersion}}",{{#useNgPackagr}}
     "ng-packagr": "^{{ngPackagrVersion}}",{{/useNgPackagr}}
-    "reflect-metadata": "^0.1.3",
+    "reflect-metadata": "^0.1.13",
     "rxjs": "^{{rxjsVersion}}",{{#useNgPackagr}}{{^useOldNgPackagr}}
     "tsickle": "^{{tsickleVersion}}",{{/useOldNgPackagr}}{{/useNgPackagr}}
     "typescript": "{{{tsVersion}}}",

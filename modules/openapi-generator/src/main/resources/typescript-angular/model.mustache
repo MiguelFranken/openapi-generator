@@ -4,7 +4,40 @@
 {{#tsImports}}
 import { {{classname}} } from '{{filename}}';
 {{/tsImports}}
+import { Type } from "class-transformer";
 
+{{^isEnum}}
+  {{^isAlias}}
+    {{^taggedUnions}}
+      {{^oneOf}}
+        {{#vars}}
+          {{#isDate}}
+export function Type{{classname}}{{{name}}}() {
+    return Date;
+}
+          {{/isDate}}
+          {{#isDateTime}}
+export function Type{{classname}}{{{name}}}() {
+    return Date;
+}
+          {{/isDateTime}}
+          {{^isPrimitiveType}}
+            {{#isModel}}
+export function Type{{classname}}{{{name}}}() {
+    return {{{dataType}}};
+}
+            {{/isModel}}
+            {{^isModel}}
+export function Type{{classname}}{{{name}}}() {
+    return {{{complexType}}};
+}
+            {{/isModel}}
+          {{/isPrimitiveType}}
+        {{/vars}}
+      {{/oneOf}}
+    {{/taggedUnions}}
+  {{/isAlias}}
+{{/isEnum}}
 
 {{#description}}
 /**

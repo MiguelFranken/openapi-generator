@@ -1,16 +1,16 @@
-## Stubi Backend Angular API Client Test2
+## Stubi Backend Angular API Client
 
 ### NPM Configuration
-Add `@miguelfranken:registry=https://npm.pkg.github.com` to `~/.npmrc`
+Add `@it4kids:registry=https://npm.pkg.github.com` to `~/.npmrc`
 
 ### Install
 ```
-npm install @miguelfranken/stubi-backend-angular-client@0.0.1-SNAPSHOT.202004011945 --save
+npm install @miguelfranken/stubi-backend-angular-client@0.0.1-SNAPSHOT.202004040933 --save
 ```
 
 ### General usage
 
-```
+```typescript
 // without configuring providers
 import { ApiModule } from '@miguelfranken/stubi-backend-angular-client';
 import { HttpClientModule } from '@angular/common/http';
@@ -30,7 +30,7 @@ import { HttpClientModule } from '@angular/common/http';
 export class AppModule {}
 ```
 
-```
+```typescript
 // configuring providers
 import { ApiModule, Configuration, ConfigurationParameters } from '@miguelfranken/stubi-backend-angular-client';
 
@@ -50,7 +50,7 @@ export function apiConfigFactory (): Configuration => {
 export class AppModule {}
 ```
 
-```
+```typescript
 import { DefaultApi } from '@miguelfranken/stubi-backend-angular-client';
 
 export class AppComponent {
@@ -64,7 +64,7 @@ This is to ensure that all services are treated as singletons.
 ### Set service base path
 If different than the generated base path, during app bootstrap, you can provide the base path to your service. 
 
-```
+```typescript
 import { BASE_PATH } from '@miguelfranken/stubi-backend-angular-client';
 
 bootstrap(AppComponent, [
@@ -73,7 +73,7 @@ bootstrap(AppComponent, [
 ```
 or
 
-```
+```typescript
 import { BASE_PATH } from '@miguelfranken/stubi-backend-angular-client';
 
 @NgModule({
