@@ -17,8 +17,10 @@
 
 package org.openapitools.codegen.languages;
 
+import io.swagger.models.Model;
 import io.swagger.v3.oas.models.media.Schema;
 import org.openapitools.codegen.*;
+import org.openapitools.codegen.examples.ExampleGenerator;
 import org.openapitools.codegen.meta.features.DocumentationFeature;
 import org.openapitools.codegen.utils.ModelUtils;
 import org.openapitools.codegen.utils.SemVer;
@@ -44,6 +46,7 @@ public class TypeScriptAngularClientCodegen extends AbstractTypeScriptClientCode
     public static final String WITH_INTERFACES = "withInterfaces";
     public static final String USE_SINGLE_REQUEST_PARAMETER = "useSingleRequestParameter";
     public static final String TAGGED_UNIONS = "taggedUnions";
+    public static final String STUBI_EXAMPLE = "stubiExample";
     public static final String NG_VERSION = "ngVersion";
     public static final String PROVIDED_IN_ROOT = "providedInRoot";
     public static final String ENFORCE_GENERIC_MODULE_WITH_PROVIDERS = "enforceGenericModuleWithProviders";
@@ -533,6 +536,14 @@ public class TypeScriptAngularClientCodegen extends AbstractTypeScriptClientCode
                 // Add additional filename information for imports
                 Set<String> parsedImports = parseImports(cm);
                 mo.put("tsImports", toTsImports(cm, parsedImports));
+
+//                ModelUtils.getSchema(this.openAPI, "").getExample()
+
+
+                Map<String, Schema> schemas = ModelUtils.getSchemas(this.openAPI);
+                List<Map<String, String>> examples = new ExampleGenerator(schemas, this.openAPI).generate(null, null, cm.getName());
+
+                cm.setStubiExample(examples);
             }
         }
         return result;

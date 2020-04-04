@@ -46,6 +46,16 @@ public class CodegenModel implements IJsonSchemaValidationProperties {
     public Set<String> oneOf = new TreeSet<String>();
     public Set<String> allOf = new TreeSet<String>();
 
+    public List<Map<String, String>> stubiExample;
+
+    public List<Map<String, String>> getStubiExample() {
+        return stubiExample;
+    }
+
+    public void setStubiExample(List<Map<String, String>> stubiExample) {
+        this.stubiExample = stubiExample;
+    }
+
     public String name, classname, title, description, classVarName, modelJson, dataType, xmlPrefix, xmlNamespace, xmlName;
     public String classFilename; // store the class file name, mainly used for import
     public String unescapedDescription;

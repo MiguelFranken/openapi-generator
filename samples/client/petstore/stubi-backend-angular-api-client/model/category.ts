@@ -14,6 +14,15 @@ import { Type } from "class-transformer";
 
 /**
  * A category for a pet
+ * <p></p>
+ * <p></p>
+ * <b>Example Model:</b><br>
+ * <pre>
+ * {
+  "name" : "Hallo Welt",
+  "id" : 0
+}
+ * </pre>
  */
 // @dynamic
 export class Category { 

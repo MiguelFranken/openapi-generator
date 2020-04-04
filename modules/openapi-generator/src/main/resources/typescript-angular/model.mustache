@@ -42,6 +42,12 @@ export function Type{{classname}}{{{name}}}() {
 {{#description}}
 /**
  * {{{description}}}
+ * {{#stubiExample}}<p></p>
+ * <p></p>
+ * <b>Example Model:</b><br>
+ * <pre>
+ * {{{example}}}
+ * </pre>{{/stubiExample}}
  */
 {{/description}}
 {{#isEnum}}{{>modelEnum}}{{/isEnum}}{{^isEnum}}{{#isAlias}}{{>modelAlias}}{{/isAlias}}{{^isAlias}}{{#taggedUnions}}{{>modelTaggedUnion}}{{/taggedUnions}}{{^taggedUnions}}{{#oneOf}}{{#-first}}{{>modelOneOf}}{{/-first}}{{/oneOf}}{{^oneOf}}{{>modelGeneric}}{{/oneOf}}{{/taggedUnions}}{{/isAlias}}{{/isEnum}}
