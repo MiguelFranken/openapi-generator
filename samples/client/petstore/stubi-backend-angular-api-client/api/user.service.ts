@@ -78,7 +78,12 @@ export interface UpdateUserRequestParams {
     body: User;
 }
 
-
+/**
+ * Some description of the tag
+ * <p><b>Responses:</b><ul>
+ *   <li>Test
+ *   <li>Test2
+ */
 @Injectable({
   providedIn: 'root'
 })

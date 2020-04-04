@@ -67,18 +67,10 @@ export interface {{#prefixParameterInterfaces}}{{classname}}{{/prefixParameterIn
 {{/useSingleRequestParameter}}
 {{/withInterfaces}}
 
-{{#operation.0}}
-  {{#tags.0}}
 /**
-  * {{{description}}}
+  {{#operation.0}}{{#tags.0}}* {{{description}}}{{/tags.0}}{{/operation.0}}
+  {{#description}}* <p>{{&description}}</p>{{/description}}
   */
-  {{/tags.0}}
-{{/operation.0}}
-{{#description}}
-/**
- * {{&description}}
- */
-{{/description}}
 {{^providedInRoot}}
 @Injectable()
 {{/providedInRoot}}
@@ -212,6 +204,9 @@ export class {{classname}} {
 {{#notes}}
      * {{notes}}
 {{/notes}}
+     * <p><b>Responses:</b><ul>
+     * {{#responses}}<li>{{{code}}} ({{{message}}}){{#hasMore}} {@link {{baseType}}}{{/hasMore}}{{/responses}}
+     *
      {{#allParams.0}}
      * @param requestParameters TODO
      {{/allParams.0}}

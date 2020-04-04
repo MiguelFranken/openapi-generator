@@ -28,6 +28,10 @@ paths:
         - application/xml
         - application/json
       responses:
+        '202':
+          description: Ok
+          schema:
+            $ref: "#/definitions/Category"
         '405':
           description: Invalid input
 definitions:

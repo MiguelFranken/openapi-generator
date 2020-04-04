@@ -20,6 +20,7 @@ import { Observable, throwError, Subject } from 'rxjs';
 import { plainToClassFromExist } from "class-transformer";
 import { catchError, map, concatMap } from "rxjs/operators";
 
+import { Category } from '../model/models';
 
 import { BASE_PATH, COLLECTION_FORMATS, HttpImage, IRequestOptions, IRequestOptionsWithResponseType }          from '../variables';
 import { Configuration }                                     from '../configuration';
@@ -41,6 +42,7 @@ interface BlobOptions {
 
 /**
   * Everything about your Pets
+  
   */
 @Injectable({
   providedIn: 'root'
@@ -139,11 +141,14 @@ export class PetService {
 
     /**
      * Add a new pet to the store
+     * <p><b>Responses:</b><ul>
+     * <li>202 (Ok) {@link Category}<li>405 (Invalid input)
+     *
      * @param requestOptions TODO
      */
-    public addPet(requestOptions?: IRequestOptions): Observable<any>
+    public addPet(requestOptions?: IRequestOptions): Observable<Category>
     public addPet<T>(requestOptions?: IRequestOptionsWithResponseType<T>): Observable<T>
-    public addPet<T>(requestOptions?: any): Observable<any> {
+    public addPet<T>(requestOptions?: any): Observable<Category> {
         if (!!requestOptions && !!requestOptions.debugging) {
             if (!!requestOptions.responseType) {
                 this.logger.debug("Using extended DTO for deserialization");
@@ -158,6 +163,8 @@ export class PetService {
 
         // to determine the Accept header
         const httpHeaderAccepts: string[] = [
+            'application/xml',
+            'application/json'
         ];
         let httpHeaderAcceptSelected  = this.configuration.selectHeaderAccept(httpHeaderAccepts);
         if (httpHeaderAcceptSelected !== undefined) {
@@ -202,7 +209,7 @@ export class PetService {
             );
             return responseObservable;
         } else {
-            return this.httpClient.post<any>(requestPath, 
+            return this.httpClient.post<Category>(requestPath, 
             null,
                 httpOptions
             ).pipe(
