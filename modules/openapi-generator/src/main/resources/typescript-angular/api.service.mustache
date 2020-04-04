@@ -55,6 +55,11 @@ interface BlobOptions {
 {{#useSingleRequestParameter}}
 {{#operation}}
 {{#allParams.0}}
+/**
+{{#allParams}}
+ * @property { {{{dataType}}}{{#isNullable}} | null{{/isNullable}}{{^required}} | undefined{{/required}} } {{paramName}} - {{#description}}{{description}}{{/description}}
+{{/allParams}}
+ */
 export interface {{#prefixParameterInterfaces}}{{classname}}{{/prefixParameterInterfaces}}{{operationIdCamelCase}}RequestParams {
 {{#allParams}}
     {{#description}}/** {{description}} */

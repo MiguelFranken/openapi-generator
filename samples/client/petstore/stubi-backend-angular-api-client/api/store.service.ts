@@ -39,16 +39,25 @@ interface BlobOptions {
 }
 
 
+/**
+ * @property { string } orderId - ID of the order that needs to be deleted
+ */
 export interface DeleteOrderRequestParams {
     /** ID of the order that needs to be deleted */
     orderId: string;
 }
 
+/**
+ * @property { number } orderId - ID of pet that needs to be fetched
+ */
 export interface GetOrderByIdRequestParams {
     /** ID of pet that needs to be fetched */
     orderId: number;
 }
 
+/**
+ * @property { Order } body - order placed for purchasing the pet
+ */
 export interface PlaceOrderRequestParams {
     /** order placed for purchasing the pet */
     body: Order;

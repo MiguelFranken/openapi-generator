@@ -40,37 +40,61 @@ interface BlobOptions {
 }
 
 
+/**
+ * @property { Pet } body - Pet object that needs to be added to the store
+ */
 export interface AddPetRequestParams {
     /** Pet object that needs to be added to the store */
     body: Pet;
 }
 
+/**
+ * @property { number } petId - Pet id to delete
+ * @property { string | undefined } apiKey - 
+ */
 export interface DeletePetRequestParams {
     /** Pet id to delete */
     petId: number;
     apiKey?: string;
 }
 
+/**
+ * @property { Array<'available' | 'pending' | 'sold'> } status - Status values that need to be considered for filter
+ */
 export interface FindPetsByStatusRequestParams {
     /** Status values that need to be considered for filter */
     status: Array<'available' | 'pending' | 'sold'>;
 }
 
+/**
+ * @property { Array<string> } tags - Tags to filter by
+ */
 export interface FindPetsByTagsRequestParams {
     /** Tags to filter by */
     tags: Array<string>;
 }
 
+/**
+ * @property { number } petId - ID of pet to return
+ */
 export interface GetPetByIdRequestParams {
     /** ID of pet to return */
     petId: number;
 }
 
+/**
+ * @property { Pet } body - Pet object that needs to be added to the store
+ */
 export interface UpdatePetRequestParams {
     /** Pet object that needs to be added to the store */
     body: Pet;
 }
 
+/**
+ * @property { number } petId - ID of pet that needs to be updated
+ * @property { string | undefined } name - Updated name of the pet
+ * @property { string | undefined } status - Updated status of the pet
+ */
 export interface UpdatePetWithFormRequestParams {
     /** ID of pet that needs to be updated */
     petId: number;
@@ -80,6 +104,11 @@ export interface UpdatePetWithFormRequestParams {
     status?: string;
 }
 
+/**
+ * @property { number } petId - ID of pet to update
+ * @property { string | undefined } additionalMetadata - Additional data to pass to server
+ * @property { Blob | undefined } file - file to upload
+ */
 export interface UploadFileRequestParams {
     /** ID of pet to update */
     petId: number;

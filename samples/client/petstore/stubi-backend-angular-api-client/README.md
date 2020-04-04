@@ -5,7 +5,7 @@ Add `@it4kids:registry=https://npm.pkg.github.com` to `~/.npmrc`
 
 ### Install
 ```
-npm install @miguelfranken/stubi-backend-angular-client@0.0.1-SNAPSHOT.202004041802 --save
+npm install @miguelfranken/stubi-backend-angular-client@0.0.1-SNAPSHOT.202004042039 --save
 ```
 
 ### General usage

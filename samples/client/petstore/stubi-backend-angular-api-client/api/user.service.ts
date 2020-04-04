@@ -39,31 +39,50 @@ interface BlobOptions {
 }
 
 
+/**
+ * @property { User } body - Created user object
+ */
 export interface CreateUserRequestParams {
     /** Created user object */
     body: User;
 }
 
+/**
+ * @property { Array<User> } body - List of user object
+ */
 export interface CreateUsersWithArrayInputRequestParams {
     /** List of user object */
     body: Array<User>;
 }
 
+/**
+ * @property { Array<User> } body - List of user object
+ */
 export interface CreateUsersWithListInputRequestParams {
     /** List of user object */
     body: Array<User>;
 }
 
+/**
+ * @property { string } username - The name that needs to be deleted
+ */
 export interface DeleteUserRequestParams {
     /** The name that needs to be deleted */
     username: string;
 }
 
+/**
+ * @property { string } username - The name that needs to be fetched. Use user1 for testing.
+ */
 export interface GetUserByNameRequestParams {
     /** The name that needs to be fetched. Use user1 for testing. */
     username: string;
 }
 
+/**
+ * @property { string } username - The user name for login
+ * @property { string } password - The password for login in clear text
+ */
 export interface LoginUserRequestParams {
     /** The user name for login */
     username: string;
@@ -71,6 +90,10 @@ export interface LoginUserRequestParams {
     password: string;
 }
 
+/**
+ * @property { string } username - name that need to be deleted
+ * @property { User } body - Updated user object
+ */
 export interface UpdateUserRequestParams {
     /** name that need to be deleted */
     username: string;
