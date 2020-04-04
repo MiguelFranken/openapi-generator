@@ -17,7 +17,6 @@ paths:
   /pet:
     post:
       summary: Add a new pet to the store
-      description: ''
       operationId: addPet
       tags:
         - pet
