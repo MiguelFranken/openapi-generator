@@ -325,8 +325,8 @@ export class {{classname}} {
             if (httpHeaderAccepts.find((acceptString: string) => acceptString.includes("json")) === undefined) {
                 acceptString += ", application/json";
             }
-            headers = headers.set('Accept', ); // always accept this as error responses are in JSON
         }
+        headers = headers.set('Accept', acceptString);
 
 {{#bodyParam}}
         // to determine the Content-Type header
