@@ -40,6 +40,7 @@ interface LogRequest {
     url: string;
     params?: HttpParams;
     body?: any;
+    headers?: HttpHeaders;
 }
 
 interface BlobOptions {
@@ -428,7 +429,8 @@ export class {{classname}} {
 
         const logRequest: LogRequest = {
             url: requestPath,
-            {{#isBodyAllowed}}body: {{#bodyParam}}{{paramName}}{{/bodyParam}}{{^bodyParam}}{{#hasFormParams}}convertFormParamsToString ? formParams.toString() : formParams{{/hasFormParams}}{{^hasFormParams}}null{{/hasFormParams}}{{/bodyParam}}{{/isBodyAllowed}}
+            {{#isBodyAllowed}}body: {{#bodyParam}}{{paramName}}{{/bodyParam}}{{^bodyParam}}{{#hasFormParams}}convertFormParamsToString ? formParams.toString() : formParams{{/hasFormParams}}{{^hasFormParams}}null{{/hasFormParams}}{{/bodyParam}},{{/isBodyAllowed}}
+            headers
         };
 
         if (acceptString.includes('image')) {
