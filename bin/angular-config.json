@@ -1,0 +1,6 @@
+{
+  "supportES6": "true",
+  "useSingleRequestParameter": "true",
+  "ngVersion": "9.1.0",
+  "fileNaming": "kebab-case"
+}

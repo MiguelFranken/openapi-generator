@@ -1,0 +1,13 @@
+export * from './authentication.service';
+import { AuthenticationService } from './authentication.service';
+export * from './developer-endpoints.service';
+import { DeveloperEndpointsService } from './developer-endpoints.service';
+export * from './monitoring.service';
+import { MonitoringService } from './monitoring.service';
+export * from './news.service';
+import { NewsService } from './news.service';
+export * from './push-notifications.service';
+import { PushNotificationsService } from './push-notifications.service';
+export * from './user.service';
+import { UserService } from './user.service';
+export const APIS = [AuthenticationService, DeveloperEndpointsService, MonitoringService, NewsService, PushNotificationsService, UserService];
