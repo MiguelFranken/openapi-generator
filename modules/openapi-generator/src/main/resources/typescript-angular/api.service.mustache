@@ -319,7 +319,7 @@ export class {{classname}} {
         ];
         let httpHeaderAcceptSelected  = this.configuration.selectHeaderAccept(httpHeaderAccepts);
 
-        const acceptString = "application/json";
+        let acceptString = "application/json";
         if (httpHeaderAccepts.length > 0) {
             acceptString = httpHeaderAccepts.join(", ");
             if (httpHeaderAccepts.find((acceptString: string) => acceptString.includes("json")) === undefined) {
