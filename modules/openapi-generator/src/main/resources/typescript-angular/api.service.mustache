@@ -317,11 +317,15 @@ export class {{classname}} {
             {{/produces}}
         ];
         let httpHeaderAcceptSelected  = this.configuration.selectHeaderAccept(httpHeaderAccepts);
-        if (httpHeaderAcceptSelected !== undefined) {
-            headers = headers.set('Accept', httpHeaderAcceptSelected);
-        }
 
-        headers = headers.set('Accept', "application/json"); // always accept this as error responses are in JSON
+        const acceptString = "application/json";
+        if (httpHeaderAccepts.length > 0) {
+            acceptString = httpHeaderAccepts.join(", ");
+            if (httpHeaderAccepts.find((acceptString: string) => acceptString.includes("json")) === undefined) {
+                acceptString += ", application/json";
+            }
+            headers = headers.set('Accept', ); // always accept this as error responses are in JSON
+        }
 
 {{#bodyParam}}
         // to determine the Content-Type header
@@ -400,7 +404,7 @@ export class {{classname}} {
             responseType = 'text';
         }
     {{/isResponseFile}}
-        if(httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+        if(acceptString.includes('image')) {
             responseType = "blob" as "json";
         }
 
@@ -427,7 +431,7 @@ export class {{classname}} {
             {{#isBodyAllowed}}body: {{#bodyParam}}{{paramName}}{{/bodyParam}}{{^bodyParam}}{{#hasFormParams}}convertFormParamsToString ? formParams.toString() : formParams{{/hasFormParams}}{{^hasFormParams}}null{{/hasFormParams}}{{/bodyParam}}{{/isBodyAllowed}}
         };
 
-        if (httpHeaderAcceptSelected && httpHeaderAcceptSelected.includes('image')) {
+        if (acceptString.includes('image')) {
             return this.httpClient.get<Blob>(requestPath, httpOptions as BlobOptions).pipe(
                 concatMap(result => {
                     return this.createImageFromBlob(result);
