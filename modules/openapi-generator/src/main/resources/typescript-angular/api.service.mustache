@@ -318,6 +318,8 @@ export class {{classname}} {
             headers = headers.set('Accept', httpHeaderAcceptSelected);
         }
 
+        headers = headers.set('Accept', "application/json"); // always accept this as error responses are in JSON
+
 {{#bodyParam}}
         // to determine the Content-Type header
         const consumes: string[] = [
