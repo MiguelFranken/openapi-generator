@@ -15,7 +15,7 @@ import { Http, Headers, URLSearchParams,
 import { CustomQueryEncoderHelper }                          from '../encoder';
 {{/useHttpClient}}
 {{#useRxJS6}}
-import { Observable, throwError, Subject } from 'rxjs';
+import { Observable, throwError, Subject, BehaviorSubject } from 'rxjs';
 import { plainToClassFromExist } from "class-transformer";
 import { catchError, map, concatMap } from "rxjs/operators";
 {{/useRxJS6}}
