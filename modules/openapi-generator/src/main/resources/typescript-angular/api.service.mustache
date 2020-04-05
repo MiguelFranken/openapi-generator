@@ -135,10 +135,13 @@ export class {{classname}} {
     constructor(
       protected {{#useHttpClient}}httpClient: HttpClient{{/useHttpClient}}{{^useHttpClient}}http: Http{{/useHttpClient}},
       @Optional()@Inject(BASE_PATH) basePath: string,
-      @Optional() configuration: Configuration
+      @Optional() configuration: BehaviorSubject<Configuration>
     ) {
         if (configuration) {
-            this.configuration = configuration;
+            configuration.subscribe((configuration) => {
+                this.configuration = configuration;
+                this.logger.debug("Updated API configuration");
+            });
         }
         if (typeof this.configuration.basePath !== 'string') {
             if (typeof basePath !== 'string') {
