@@ -5,6 +5,7 @@ import { DeveloperEndpointsService } from "@generatedclient/api/developer-endpoi
 import { AuthenticationService, ResendRegistrationCodeRequestParams } from "@generatedclient/api/authentication.service";
 import { CreateUserRequestParams, DownloadProfileImageRequestParams, UserService } from "@generatedclient/api/user.service";
 import { FindAllActiveNewsRequestParams, NewsService } from "@generatedclient/api/news.service";
+import { Configuration } from "@generatedclient/configuration";
 
 @Component({
   selector: 'app-root',

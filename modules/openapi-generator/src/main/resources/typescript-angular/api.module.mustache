@@ -2,7 +2,6 @@ import { NgModule, ModuleWithProviders, SkipSelf, Optional } from '@angular/core
 import { Configuration } from './configuration';
 {{#useHttpClient}}import { HttpClient } from '@angular/common/http';{{/useHttpClient}}
 {{^useHttpClient}}import { Http } from '@angular/http';{{/useHttpClient}}
-import { BehaviorSubject } from 'rxjs';
 
 {{#apiInfo}}
 {{#apis}}
@@ -19,7 +18,7 @@ import { {{classname}} } from './{{importPath}}';
     {{/hasMore}}{{/apis}}{{/apiInfo}} {{/providedInRoot}}]
 })
 export class {{apiModuleClassName}} {
-    public static forRoot(configurationFactory: () => BehaviorSubject<Configuration>): ModuleWithProviders{{#enforceGenericModuleWithProviders}}<{{apiModuleClassName}}>{{/enforceGenericModuleWithProviders}} {
+    public static forRoot(configurationFactory: () => Configuration): ModuleWithProviders{{#enforceGenericModuleWithProviders}}<{{apiModuleClassName}}>{{/enforceGenericModuleWithProviders}} {
         return {
             ngModule: {{apiModuleClassName}},
             providers: [ { provide: Configuration, useFactory: configurationFactory } ]

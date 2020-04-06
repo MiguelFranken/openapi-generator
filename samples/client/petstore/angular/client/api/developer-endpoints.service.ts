@@ -16,7 +16,7 @@ import { Logger } from "@upe/logger";
 import { HttpClient, HttpHeaders, HttpParams, HttpErrorResponse,
          HttpResponse, HttpEvent, HttpParameterCodec }       from '@angular/common/http';
 import { CustomHttpParameterCodec }                          from '../encoder';
-import { Observable, throwError, Subject, BehaviorSubject } from 'rxjs';
+import { Observable, throwError, Subject } from 'rxjs';
 import { plainToClassFromExist } from "class-transformer";
 import { catchError, map, concatMap } from "rxjs/operators";
 
@@ -91,13 +91,10 @@ export class DeveloperEndpointsService {
     constructor(
       protected httpClient: HttpClient,
       @Optional()@Inject(BASE_PATH) basePath: string,
-      @Optional() configuration: BehaviorSubject<Configuration>
+      @Optional() configuration: Configuration
     ) {
         if (configuration) {
-            configuration.subscribe((configuration) => {
-                this.configuration = configuration;
-                this.logger.debug("Updated API configuration");
-            });
+            this.configuration = configuration;
         }
         if (typeof this.configuration.basePath !== 'string') {
             if (typeof basePath !== 'string') {

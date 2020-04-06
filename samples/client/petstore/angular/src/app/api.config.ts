@@ -1,13 +1,12 @@
 import { Token } from './token';
-import { BehaviorSubject } from "rxjs";
-import { Configuration, ConfigurationParameters } from "../../client";
+import { Configuration, ConfigurationParameters } from "@generatedclient/configuration";
 
-export function apiConfigFactory(): BehaviorSubject<Configuration> {
+export function apiConfigFactory(): Configuration {
   const params: ConfigurationParameters = {
     apiKeys:
-      Token.isPresentToken() ? {
+      () => Token.isPresentToken() ? {
         Authorization: `Bearer ${Token.getToken()}`
       } : {}
   };
-  return new BehaviorSubject<Configuration>(new Configuration(params));
+  return new Configuration(params);
 }
