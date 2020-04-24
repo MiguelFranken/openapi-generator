@@ -59,7 +59,7 @@ export interface SendPushNotificationRequestParams {
 })
 export class PushNotificationsService {
 
-    protected basePath = 'http://localhost';
+    protected basePath = 'http://49.12.40.234:8080';
     public defaultHeaders = new HttpHeaders();
     public configuration = new Configuration();
     public encoder: HttpParameterCodec;

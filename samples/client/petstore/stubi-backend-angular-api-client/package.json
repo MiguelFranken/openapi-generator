@@ -1,0 +1,43 @@
+{
+  "name": "@miguelfranken/stubi-backend-angular-client",
+  "version": "0.0.1-SNAPSHOT.202004242305",
+  "description": "OpenAPI client for @miguelfranken/stubi-backend-angular-client",
+  "author": "OpenAPI-Generator Contributors",
+  "keywords": [
+    "openapi-client",
+    "openapi-generator"
+  ],
+  "license": "Unlicense",
+  "scripts": {
+    "build": "ng-packagr -p ng-package.json"
+  },
+  "peerDependencies": {
+    "@angular/core": "^9.1.0",
+    "@angular/common": "^9.1.0",
+    "@angular/compiler": "^9.1.0",
+    "core-js": "^2.4.0",
+    "reflect-metadata": "^0.1.13",
+    "rxjs": "^6.5.3"
+  },
+  "dependencies": {
+    "@types/reflect-metadata": "^0.1.0",
+    "@upe/logger": "^2.0.3",
+    "class-transformer": "^0.2.3"
+  },
+  "devDependencies": {
+    "@angular/common": "^9.1.0",
+    "@angular/compiler": "^9.1.0",
+    "@angular/compiler-cli": "^9.1.0",
+    "@angular/core": "^9.1.0",
+    "@angular/platform-browser": "^9.1.0",
+    "ng-packagr": "^9.0.1",
+    "reflect-metadata": "^0.1.13",
+    "rxjs": "^6.5.3",
+    "tsickle": "^0.38.0",
+    "typescript": ">=3.6.0 <3.8.0",
+    "zone.js": "^0.10.2"
+  },
+  "publishConfig": {
+    "registry": "git://github.com/miguelfranken/stubi-backend-angular-client"
+  }
+}
