@@ -1,0 +1,17 @@
+name: Publish
+on: [push]
+jobs:
+  Publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Build & Push
+        uses: mr-smithers-excellent/docker-build-push@v2
+        with:
+          image: it4kidsac/openapi-generator
+          tag: latest
+          registry: docker.io
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
