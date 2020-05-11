@@ -1,4 +1,4 @@
-# Stubi Backend Angular API Client Generator
+# Backend Angular API Client Generator
 
 - [Docker Image](https://hub.docker.com/repository/docker/it4kidsac/openapi-generator)
 
